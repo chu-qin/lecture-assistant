@@ -160,7 +160,7 @@ def _render_current_course(cm, course: str) -> None:
                 st.switch_page(f"{_PAGE_PREFIX}2_复习与问答.py")
 
         st.markdown(
-            f'<p style="color:#B0AEA6;font-size:0.8rem;margin:0.5rem 0 0.25rem 0;">'
+            f'<p style="font-size:0.8rem;margin:0.5rem 0 0.25rem 0;opacity:0.6;">'
             f"{t('sidebar.saved_materials')}</p>",
             unsafe_allow_html=True,
         )

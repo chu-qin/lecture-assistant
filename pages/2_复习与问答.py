@@ -18,7 +18,7 @@ from datetime import datetime as _datetime  # noqa: E402
 from src.i18n import t  # noqa: E402
 from src.ui.session_state import get_state, init_session_state, set_state  # noqa: E402
 from src.ui.sidebar import render_sidebar  # noqa: E402
-from src.ui.theme import inject_workspace_layout  # noqa: E402
+from src.ui.theme import inject_mermaid, inject_workspace_layout  # noqa: E402
 
 # ====================================================================
 # 辅助函数（必须在页面逻辑之前定义）
@@ -518,6 +518,7 @@ def _build_kb_from_sources(
 init_session_state()
 render_sidebar()
 inject_workspace_layout()
+inject_mermaid()
 
 st.subheader(t("nav.workspace"))
 st.caption(t("page2.caption"))
