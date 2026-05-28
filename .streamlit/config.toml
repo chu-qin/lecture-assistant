@@ -1,11 +1,3 @@
-[theme]
-base = "light"
-primaryColor = "#2C3E5C"
-backgroundColor = "#F9F8F6"
-secondaryBackgroundColor = "#FFFFFF"
-textColor = "#1E1E1E"
-font = "sans serif"
-
 [server]
 maxUploadSize = 500
 enableXsrfProtection = false

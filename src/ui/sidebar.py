@@ -5,7 +5,7 @@ from pathlib import Path
 
 import streamlit as st
 
-from src.i18n import get_available_languages, get_language, set_language, t
+from src.i18n import t
 
 from .session_state import get_state, reset_course_state, set_state
 from .theme import inject_theme_css
@@ -35,30 +35,12 @@ def _ensure_services() -> None:
     set_state("course_manager", cm)
 
 
-def _render_language_switcher() -> None:
-    """在侧边栏顶部渲染语言切换器。"""
-    langs = get_available_languages()
-    current = get_language()
-    selected = st.selectbox(
-        t("lang.switcher"),
-        options=list(langs.keys()),
-        format_func=lambda code: langs[code],
-        index=list(langs.keys()).index(current) if current in langs else 0,
-        key="lang_switcher",
-        label_visibility="collapsed",
-    )
-    if selected != current:
-        set_language(selected)
-        st.rerun()
-
-
 def render_sidebar() -> None:
     """渲染两级菜单侧边栏。"""
 
     with st.sidebar:
         inject_theme_css()
         _ensure_services()
-        _render_language_switcher()
         cm = get_state("course_manager")
         current = get_state("current_course", "")
 

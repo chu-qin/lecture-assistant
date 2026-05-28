@@ -40,7 +40,7 @@ def _material_type_short(material_type: str) -> str:
 
 
 def _normalize_latex(content: str) -> str:
-    """标准化 LaTeX 公式分隔符，确保能正确渲染。"""
+    """标准化 LaTeX 分隔符，自动闭合未配对的 $ 避免 KaTeX 报错。"""
     import re
 
     # 将 \( ... \) 替换为 $...$（行内公式）
@@ -52,7 +52,37 @@ def _normalize_latex(content: str) -> str:
     # 修复中文紧贴 $ 的问题：在中文和 $ 之间加空格
     content = re.sub(r"([一-鿿　-〿＀-￯])\$", r"\1 $", content)
     content = re.sub(r"\$([一-鿿　-〿＀-￯])", r"$ \1", content)
-    return content
+
+    # 清除 math block 内的 HTML 标签（如 <font color="red">），避免 KaTeX 将其属性引号误解析
+    def _strip_html_in_math(m: re.Match) -> str:
+        return re.sub(r"<[^>]+>", "", m.group(0))
+
+    content = re.sub(r"\$\$(.+?)\$\$", _strip_html_in_math, content, flags=re.DOTALL)
+    content = re.sub(r"\$(.+?)\$", _strip_html_in_math, content)
+
+    # 自动闭合未配对的 $：LLM 经常输出 "$ formula" 缺闭合 $，导致 KaTeX
+    # 将后续中文全部当作数学模式解析，产生 "Unicode text character used in math mode" 错误。
+    # 逐行检测，$$ 优先匹配，剩余单个 $ 若为奇数则自动在行尾补 $
+    lines = content.split("\n")
+    result: list[str] = []
+    in_math = False
+    for line in lines:
+        # 先扣除 $$ 对，再计剩余 $
+        temp = line.replace("$$", "")
+        dollar_count = temp.count("$")
+        if in_math:
+            if dollar_count % 2 == 1:
+                in_math = False
+            result.append(line)
+        else:
+            if dollar_count % 2 == 1:
+                in_math = True
+                line = line.rstrip() + "$"
+            result.append(line)
+    if in_math:
+        result[-1] = result[-1].rstrip() + "$"
+
+    return "\n".join(result)
 
 
 def _render_markdown(content: str) -> None:
@@ -121,23 +151,24 @@ def _build_type_sections(generate_types: list[str]) -> list[str]:
 
 **重要：直接生成题目，不要先输出知识点回顾、章节复习、概念梳理等内容。开门见山，从第一道题开始。每道题在解析中简要说明所考查的知识点即可。**
 
-生成高质量的练习题，覆盖全部重点和难点：
+生成高质量的练习题，覆盖全部重点和难点，题目数量以覆盖所有重要知识点为准：
 
-### 单选题（8-12 道）
+### 单选题
+- 覆盖所有重要知识点，数量不限
 - 每道 4 个选项，标注正确答案
 - 每个错误选项应该代表一种典型误解（并说明为什么错）
 - 每题附详细解析
 
-### 填空题（5-8 道）
-- 考查关键公式、定义中的关键词汇
+### 填空题
+- 覆盖关键公式、定义中的关键词汇，数量不限
 - 附完整答案解析
 
-### 简答题（5-8 道）
-- 考查概念理解、定理陈述、方法比较
+### 简答题
+- 覆盖概念理解、定理陈述、方法比较，数量不限
 - 附参考答案要点（列出得分点）
 
-### 计算/证明题（3-5 道）
-- 考查综合运用能力
+### 计算/证明题
+- 覆盖重点计算方法，数量不限
 - 附完整解题步骤和评分标准""")
 
     return sections
@@ -450,7 +481,7 @@ init_session_state()
 render_sidebar()
 inject_workspace_layout()
 
-st.title(t("nav.workspace"))
+st.subheader(t("nav.workspace"))
 st.caption(t("page2.caption"))
 
 # ---- 课程检查 ----
@@ -637,41 +668,45 @@ with left_col:
         selected_mat = get_state("selected_material")
 
         if materials:
+            # Tab 标签页切换（每个资料一个 Tab）
+            tab_labels = []
             for m in materials:
-                is_selected = selected_mat == m.filename
                 type_tag = _material_type_short(m.material_type)
-                label = t(
-                    "page2.material_label",
-                    name=m.display_name,
-                    type=type_tag,
-                    date=m.created_at[:10],
-                    chars=f"{m.char_count:,}",
-                )
+                label = f"{type_tag} {m.display_name[:20]}"
+                tab_labels.append(label)
 
-                if st.button(
-                    label,
-                    key=f"view_mat_{m.filename}",
-                    use_container_width=True,
-                    type="primary" if is_selected else "secondary",
-                ):
-                    set_state("selected_material", m.filename)
-                    st.rerun()
+            # 找到已选中或默认第一个
+            tab_idx = 0
+            if selected_mat:
+                for i, m in enumerate(materials):
+                    if m.filename == selected_mat:
+                        tab_idx = i
+                        break
 
-                if is_selected:
+            tabs = st.tabs(tab_labels)
+            for i, (tab, m) in enumerate(zip(tabs, materials)):
+                with tab:
+                    # 标记选中
+                    if selected_mat != m.filename:
+                        set_state("selected_material", m.filename)
+
                     content = cm.load_review_material(current, m.filename)
                     if content:
-                        with st.expander(
-                            t("page2.preview_label", name=m.display_name), expanded=True
-                        ):
+                        st.caption(
+                            f"{m.display_name} · {m.created_at[:10]} · {m.char_count:,} 字"
+                        )
+                        st.divider()
+                        with st.container():
                             _render_markdown(content)
 
-                        col_dl, col_del, _ = st.columns([1, 1, 2])
+                        col_dl, col_del, col_imp = st.columns([1, 1, 1])
                         col_dl.download_button(
                             t("page2.download_md"),
                             data=content.encode("utf-8"),
                             file_name=f"{m.display_name}.md",
                             mime="text/markdown",
                             use_container_width=True,
+                            key=f"dl_{m.filename}",
                         )
                         if col_del.button(
                             t("page2.delete"), key=f"del_{m.filename}", use_container_width=True
@@ -682,7 +717,7 @@ with left_col:
                             set_state("review_materials", [])
                             st.rerun()
 
-                        if st.button(
+                        if col_imp.button(
                             t("page2.import_kb"),
                             key=f"import_{m.filename}",
                             use_container_width=True,
@@ -855,8 +890,8 @@ with right_col:
                         stream = llm.stream_chat(messages)
                         for chunk in stream:
                             full_response += chunk
-                            placeholder.markdown(full_response + "▌")
-                    placeholder.markdown(full_response)
+                            placeholder.markdown(_normalize_latex(full_response) + "▌")
+                    placeholder.markdown(_normalize_latex(full_response))
 
                     chat_history.append(
                         {

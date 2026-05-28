@@ -7,6 +7,19 @@ def inject_theme_css() -> None:
     """注入轻量自定义 CSS，仅覆盖组件级样式。"""
     st.markdown(
         """<style>
+    /* ---- 隐藏 Streamlit 原生页面导航 ---- */
+    [data-testid="stSidebarNav"] {
+        display: none;
+    }
+
+    /* ---- 缩减顶部空白 ---- */
+    [data-testid="stAppViewContainer"] > .main .block-container {
+        padding-top: 1rem !important;
+    }
+    [data-testid="stSidebarContent"] {
+        padding-top: 1rem !important;
+    }
+
     /* ---- 分割线 ---- */
     hr {
         border: none;
@@ -70,25 +83,44 @@ def inject_theme_css() -> None:
     .status-warning { color: #C4945C; }
     .status-error { color: #C4665F; }
 
-    /* ---- 左右分栏独立滚动：sticky 右栏 ---- */
+    /* ---- 左右分栏独立滚动 ---- */
     [data-testid="stHorizontalBlock"]:has([data-testid="stColumn"]:has(.st-key-workspace-right)) {
         align-items: flex-start !important;
     }
+    /* 左栏独立滚动 */
+    [data-testid="stColumn"]:has(.st-key-workspace-left) {
+        position: sticky;
+        top: 2.5rem;
+        align-self: flex-start;
+        max-height: calc(100vh - 2.5rem - 1.5rem);
+        overflow-y: auto;
+    }
+    /* 右栏独立滚动 */
     [data-testid="stColumn"]:has(.st-key-workspace-right) {
         position: sticky;
-        top: 3.75rem;
+        top: 2.5rem;
         align-self: flex-start;
-        max-height: calc(100vh - 3.75rem - 1.5rem);
+        max-height: calc(100vh - 2.5rem - 1.5rem);
         overflow-y: auto;
         z-index: 1;
         box-shadow: -1px 0 4px rgba(0, 0, 0, 0.04);
     }
-    .st-key-workspace-input {
+    /* 标签页按钮 sticky */
+    [data-testid="stTabs"] [data-baseweb="tab-list"] {
         position: sticky;
-        bottom: 0;
+        top: 0;
+        z-index: 10;
+        background: #FFFFFF;
+        padding-top: 0.25rem;
+    }
+    /* 聊天输入框 sticky */
+    .st-key-workspace-input {
+        position: sticky !important;
+        bottom: 0 !important;
         background: #F9F8F6;
-        z-index: 2;
+        z-index: 5;
         padding-top: 0.5rem;
+        padding-bottom: 0.25rem;
     }
     @media (max-width: 768px) {
         [data-testid="stHorizontalBlock"]:has(
@@ -96,14 +128,18 @@ def inject_theme_css() -> None:
         ) {
             align-items: stretch !important;
         }
+        [data-testid="stColumn"]:has(.st-key-workspace-left),
         [data-testid="stColumn"]:has(.st-key-workspace-right) {
             position: static;
             max-height: none;
             overflow-y: visible;
             box-shadow: none;
         }
-        .st-key-workspace-input {
+        [data-testid="stTabs"] [data-baseweb="tab-list"] {
             position: static;
+        }
+        .st-key-workspace-input {
+            position: static !important;
         }
         /* 平板及以下：侧边栏按钮增大触控区域 */
         [data-testid="stSidebar"] .stButton button {

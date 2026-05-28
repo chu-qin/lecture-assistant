@@ -4,9 +4,9 @@
 
 > 总代码量 ~3100 行 Python | 所有核心模块已完成 | 169 个单元测试
 
-## 当前进度（截至 2026-05-27）
+## 当前进度（截至 2026-05-28）
 
-**当前阶段**：P5 — EPUB 书本导入 + 功能增强
+**当前阶段**：P6 — 工程化收尾 + GitHub 发布准备
 
 **核心链路全部跑通**。
 
@@ -114,7 +114,19 @@ P0 → P1 工程化基础建设完成：
 - [x] `summary.txt` 确认无引用（预留模板），一并翻译
 - [x] `pytest tests/ -v` 149 passed | `ruff check` 零错误
 
-### 会话 10 完成（P5: EPUB 书本导入）
+### 会话 11 完成（P6: 工程化收尾）
+- [x] 初始化 git 仓库 + 首次 commit + push 到 GitHub（`chu-qin/lecture-assistant`）
+- [x] `.gitignore` 新增 `.claude/` 排除（Claude Code 本地权限文件不应提交）
+- [x] `src/config.py` 新增 `load_dotenv()`，启动时自动从 `.env` 文件加载环境变量
+- [x] `setup_env.bat` 全面翻新：中文化 + 步骤 6 交互式 API Key 配置（选择 provider → 输入 key → 自动写入 `.env`）
+- [x] `start.bat` 中文化 + 启动前检查 `.env` 是否存在并提示
+- [x] `README.md` 快速开始章节重写（`.env` 方式 + 5 步使用流程）
+- [x] 修复 3 个配置 bug：
+  - `openai_api_key` / `anthropic_api_key` 缺少默认值导致未配置时启动崩溃 → 加 `${VAR:}` 空默认值
+  - `start.bat` 手动 `start "" http://...` 导致双浏览器窗口 → 删除，只剩 Streamlit 自动打开
+  - `config.example.yaml` 模型名用已废弃的 `deepseek-chat` → 改为 `deepseek-v4-flash`
+- [x] `config.yaml` + `config.example.yaml` 模型注释更新为 V4 系列
+- [x] `pytest tests/ -v` 145 passed（config 13/13）
 - [x] `pyproject.toml` + `requirements.txt` 新增 `ebooklib>=0.17` + `html2text>=2024.2`
 - [x] 新建 `src/parser/epub_parser.py`（~120 行）：EpubParser 类 + get_epub_parser() 工厂
 - [x] EPUB → Markdown：ebooklib 读取元数据/章节，html2text 转换 HTML → Markdown，图片提取到 `images/`
@@ -210,6 +222,21 @@ data/courses/    # 用户数据，按课程分子目录
 - **temperature = 0.3**：教育内容需要事实准确 + 语言自然，0.3 是平衡点。不在 UI 暴露给用户
 - **max_tokens = None**：不设输出上限，让 API 使用模型自然最大输出
 
+### DeepSeek API 模型命名（2026-05 更新）
+- **当前代**：V4 系列（2026-04-24 发布）
+  - `deepseek-v4-flash`：快速/便宜，284B MoE / 13B 活跃参数，1M 上下文
+  - `deepseek-v4-pro`：旗舰推理，1.6T MoE / 49B 活跃参数
+- **即将废弃**（2026-07-24 硬截止）：
+  - `deepseek-chat` → 迁移到 `deepseek-v4-flash`（非思考模式）
+  - `deepseek-reasoner` → 迁移到 `deepseek-v4-flash`（思考模式）
+- **base_url**：`https://api.deepseek.com`（不要加 `/v1`，OpenAI SDK 自动拼接路径）
+- 本项目默认用 `deepseek-v4-flash`，性价比最高。如需更强推理可改为 `deepseek-v4-pro`
+
+### Config 环境变量 `${VAR:}` 语法
+- `${DEEPSEEK_API_KEY}` — 必填，未设置则抛出 `ConfigurationError`
+- `${OPENAI_API_KEY:}` — 可选，未设置时用空字符串（`:}` = 空默认值）
+- **规则**：只有当前 provider 对应的 key 必填（如 deepseek → `DEEPSEEK_API_KEY`），其他 provider 的 key 用 `${VAR:}` 可选语法，避免未配置时启动崩溃
+
 ### 多轮续写策略（页面 2: 复习与问答）
 - 第 1 轮正常生成 → 如果输出 ≥ 1500 字符且不含 "[生成完毕]"，发起续写 → 最多 3 轮
 - 启发式终止：输出 < 1500 字符或含 "[生成完毕]" 时停止
@@ -277,3 +304,24 @@ Streamlit 页面脚本是**从头到尾顺序执行**的。所有在页面主体
 
 ### Streamlit Widget 会话状态限制
 新版 Streamlit 禁止在 widget 实例化后修改其绑定的 `st.session_state` key。聊天输入用 `st.chat_input`（自动清空），不要用 `st.text_input` + 手动重置 session_state。`st.switch_page` 路径相对于入口脚本目录，子页面中需动态检测前缀（见 `sidebar.py` 的 `_PAGE_PREFIX`）。
+
+### Windows Batch 文件三大陷阱
+
+**1. UTF-8 编码必须带 BOM**
+- `.bat` 文件含中文 → 必须保存为 **UTF-8 with BOM**（`utf-8-sig`），否则 cmd.exe 用 GBK 读 UTF-8 字节 → 中文全部乱码 + 特殊字符（`^` 转义符等）失效 → 脚本解析崩溃
+- 文件头 3 字节 `EF BB BF` = BOM 标记，告诉 Windows 这是 UTF-8 文件
+- 写 `.bat` 文件后用 Python `pathlib.Path.write_text(content, encoding='utf-8-sig')` 确保 BOM
+
+**2. `if (...)` 块内不要有括号**
+- batch 的 `if` 用 `(...)` 作为块边界，块内的 `(` 或 `)` 会提前关闭块
+- 如 `echo # 此文件被 gitignore 排除 (.gitignore)` → `.gitignore` 外的括号会终止 if 块
+- **正确做法**：用 `if ... goto :label` 跳过，不用括号块
+
+**3. 用 `echo/` 代替 `echo.` 输出空行**
+- `echo.` 在某些 Windows 版本会被解析为"查找名为 echo 的文件"，导致意外行为
+- 统一用 `echo/` 输出空行，安全可靠
+
+### Streamlit 自动打开浏览器
+- `streamlit run` 默认会自动打开浏览器到 `http://localhost:8501`
+- **不要**在启动脚本里额外加 `start "" http://localhost:8501`，会导致双窗口
+- 如需禁用自动打开：在 `.streamlit/config.toml` 设 `[server] headless = true`

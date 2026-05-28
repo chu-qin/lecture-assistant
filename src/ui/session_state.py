@@ -12,6 +12,9 @@ def init_session_state() -> None:
         "course_manager": None,
         "current_course": "",
         "asr_results": [],  # 多文件转录结果列表
+        "asr_summary": "",  # LLM 生成的转录摘要
+        "asr_corrected": "",  # LLM 修正后的转录文本
+        "asr_corrected_confirmed": False,  # 用户确认修正
         "parsed_results": [],  # 课件解析结果列表
         "book_results": [],  # EPUB 书本导入结果列表
         "review_material": None,  # 当前会话生成的复习资料文本
@@ -43,6 +46,9 @@ def set_state(key: str, value: Any) -> None:
 def reset_course_state() -> None:
     """切换课程时重置内存中的流水线状态（持久化数据保留在文件中）。"""
     st.session_state.asr_results = []
+    st.session_state.asr_summary = ""
+    st.session_state.asr_corrected = ""
+    st.session_state.asr_corrected_confirmed = False
     st.session_state.parsed_results = []
     st.session_state.book_results = []
     st.session_state.review_material = None

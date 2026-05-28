@@ -19,7 +19,7 @@ from src.ui.sidebar import render_sidebar  # noqa: E402
 init_session_state()
 render_sidebar()
 
-st.title(t("nav.input"))
+st.subheader(t("nav.input"))
 st.caption(t("page1.caption"))
 
 # ---- 课程检查 ----
@@ -135,6 +135,65 @@ with tab_asr:
                 state.transcript_meta = {"file_count": len(results)}
                 cm.save_state(current, state)
 
+            # 全自动摘要 + AI 纠错
+            success_auto = [r for r in results if r["result"]]
+            if success_auto:
+                full_asr_text = "\n\n".join(r["result"].full_text for r in success_auto)
+
+                with st.status("正在生成摘要...") as status:
+                    try:
+                        from src.llm.factory import get_llm
+
+                        llm = get_llm(config.llm)
+                        summary_prompt = (
+                            "请用一句话（不超过50字）概括以下课堂录音的主要内容：\n\n"
+                            + full_asr_text[:2000]
+                        )
+                        summary_resp = llm.chat(
+                            [{"role": "user", "content": summary_prompt}]
+                        )
+                        summary_text = summary_resp.content
+                        set_state("asr_summary", summary_text)
+                        # 持久化摘要到文件（每个文件一份）
+                        transcript_dir = cm.sub_dir(current, "transcripts")
+                        for r in success_auto:
+                            sf = transcript_dir / f"{Path(r['name']).stem}_summary.txt"
+                            sf.write_text(summary_text, encoding="utf-8")
+                        status.update(label="摘要生成完成", state="complete")
+                    except Exception as exc:
+                        status.update(label=f"摘要生成失败: {exc}", state="error")
+
+                parsed_dir = cm.sub_dir(current, "parsed_docs")
+                if parsed_dir.exists() and list(parsed_dir.glob("*.md")):
+                    reference_parts = []
+                    for md_file in sorted(parsed_dir.glob("*.md")):
+                        text = md_file.read_text(encoding="utf-8")
+                        reference_parts.append(f"### {md_file.stem}\n\n{text[:3000]}")
+                    reference_text = "\n\n".join(reference_parts)
+
+                    with st.status("正在结合课件内容修正转录文本...") as status:
+                        try:
+                            correction_prompt = (
+                                "你是一位专业的课堂内容编辑。请根据以下材料修正语音识别转录文本中的错误。\n\n"
+                                f"## 参考材料（课件/课本内容）\n\n{reference_text}\n\n"
+                                f"## 转录文本（需修正）\n\n{full_asr_text[:6000]}\n\n"
+                                "## 修正要求\n\n"
+                                "1. 保持原始语义不变，只修正识别错误\n"
+                                "2. 结合参考材料中的术语和概念，纠正音近字、错别字\n"
+                                "3. 修正专有名词的识别错误\n"
+                                "4. 数学公式使用 LaTeX 格式\n"
+                                "5. 根据语义补充标点符号和段落分隔\n"
+                                "6. 删除无意义的口头禅和重复词语\n\n"
+                                "直接输出修正后的完整文本，不要输出修正说明。"
+                            )
+                            correction_resp = llm.chat(
+                                [{"role": "user", "content": correction_prompt}]
+                            )
+                            set_state("asr_corrected", correction_resp.content)
+                            status.update(label="转录修正完成", state="complete")
+                        except Exception as exc:
+                            status.update(label=f"修正失败: {exc}", state="error")
+
     # 显示已有转录结果
     asr_results = get_state("asr_results", [])
     if not asr_results:
@@ -145,7 +204,29 @@ with tab_asr:
             st.divider()
             st.caption(t("page1.existing_transcripts", count=len(existing)))
             for txt_file in sorted(existing):
-                st.caption(f"  {txt_file.stem.replace('_transcript', '')}")
+                col_name, col_del = st.columns([5, 1])
+                display_name = txt_file.stem.replace("_transcript", "")
+                # 读取对应摘要
+                summary_file = transcripts_dir / f"{display_name}_summary.txt"
+                if summary_file.exists():
+                    summary_text = summary_file.read_text(encoding="utf-8")
+                    col_name.caption(f"  {display_name}")
+                    col_name.caption(f"    {summary_text}")
+                else:
+                    col_name.caption(f"  {display_name}")
+                if col_del.button(
+                    "删除", key=f"del_tx_{txt_file.stem}"
+                ):
+                    # 删除对应的音频文件、转录文件和摘要
+                    audio_name = txt_file.stem.replace("_transcript", "")
+                    for ext in [".mp3", ".wav", ".m4a", ".flac", ".ogg"]:
+                        audio_file = transcripts_dir.parent / "audio" / (audio_name + ext)
+                        if audio_file.exists():
+                            audio_file.unlink()
+                    txt_file.unlink()
+                    if summary_file.exists():
+                        summary_file.unlink()
+                    st.rerun()
 
     if asr_results:
         st.divider()
@@ -196,6 +277,47 @@ with tab_asr:
                     st.error(
                         t("page1.parse_fail", error=r.get("error", t("common.unknown_error")))
                     )
+
+        # AI 修正结果显示
+        corrected = get_state("asr_corrected", "")
+        if corrected and success_results:
+            full_asr_text = "\n\n".join(
+                f"## {r['name']}\n\n{r['result'].full_text}"
+                for r in success_results
+                if r["result"]
+            )
+            with st.expander("查看 AI 修正结果", expanded=True):
+                col_orig, col_corr = st.columns(2)
+                with col_orig:
+                    st.caption("原始转录")
+                    st.text_area(
+                        "原始", value=full_asr_text[:3000], height=400,
+                        key="corr_orig", label_visibility="collapsed"
+                    )
+                with col_corr:
+                    st.caption("修正后")
+                    st.text_area(
+                        "修正", value=corrected[:3000], height=400,
+                        key="corr_corr", label_visibility="collapsed"
+                    )
+
+                col_confirm, col_discard = st.columns(2)
+                if col_confirm.button(
+                    "确认修正，更新知识库文本", type="primary", use_container_width=True
+                ):
+                    state = cm.load_state(current)
+                    state.transcript_text = corrected
+                    cm.save_state(current, state)
+                    set_state("asr_corrected_confirmed", True)
+                    st.success("已更新，知识库将使用修正后的文本")
+                    st.rerun()
+                if col_discard.button("放弃修正", use_container_width=True):
+                    set_state("asr_corrected", "")
+                    st.rerun()
+
+        # 检查是否已确认修正
+        if get_state("asr_corrected_confirmed", False):
+            st.success("转录文本已修正 ✓")
 
 # ---- Tab 2: 课件解析 ----
 with tab_parser:
@@ -284,7 +406,23 @@ with tab_parser:
             st.divider()
             st.caption(t("page1.existing_docs", count=len(existing_md)))
             for md_file in sorted(existing_md):
-                st.caption(f"  {md_file.parent.name}/{md_file.name}")
+                col_info, col_del = st.columns([5, 1])
+                display = (
+                    f"  {md_file.parent.name}/{md_file.name}"
+                    if md_file.parent != parsed_dir
+                    else f"  {md_file.name}"
+                )
+                col_info.caption(display)
+                if col_del.button("删除", key=f"del_doc_{md_file.stem}"):
+                    md_file.unlink()
+                    # 尝试删除对应的源文件
+                    for src_dir in ["courseware", "books"]:
+                        src_path = cm.sub_dir(current, src_dir) / (md_file.stem + ".*")
+                        for ext in [".pdf", ".pptx", ".ppt", ".epub"]:
+                            candidate = cm.sub_dir(current, src_dir) / (md_file.stem + ext)
+                            if candidate.exists():
+                                candidate.unlink()
+                    st.rerun()
 
     if parsed_results:
         st.divider()
@@ -415,7 +553,17 @@ with tab_book:
             st.divider()
             st.caption(t("page1.book_existing", count=len(existing_md)))
             for md_file in sorted(existing_md):
-                st.caption(f"  {md_file.name}")
+                col_info, col_del = st.columns([5, 1])
+                col_info.caption(f"  {md_file.name}")
+                if col_del.button("删除", key=f"del_book_{md_file.stem}"):
+                    md_file.unlink()
+                    # 尝试删除对应的源文件
+                    for src_dir in ["books", "courseware"]:
+                        for ext in [".epub", ".pdf", ".pptx", ".ppt"]:
+                            candidate = cm.sub_dir(current, src_dir) / (md_file.stem + ext)
+                            if candidate.exists():
+                                candidate.unlink()
+                    st.rerun()
 
     if book_results:
         st.divider()
