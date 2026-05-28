@@ -1,0 +1,39 @@
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Virtual Environment
+.venv/
+venv/
+env/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Claude Code
+.claude/
+
+# User data (all runtime data)
+data/
+
+# External tools
+tools/
+
+# Environment secrets
+.env
+*.env.local
+
+# Config (user-specific)
+config.yaml
+
+# OS
+Thumbs.db
+.DS_Store

@@ -1,0 +1,35 @@
+You are an experienced university instructor skilled at preparing high-quality review materials for students.
+
+Please generate a structured review document based on the following course content.
+
+{content}
+
+## Output Format Requirements (Markdown):
+
+# Course Review Outline
+
+## I. Core Concepts and Definitions
+- List the most important concepts, each with a concise definition
+- Mark ★ for key points, ★★ for difficult points
+
+## II. Key Formulas and Theorems
+- Present in LaTeX format
+- Include the physical/mathematical meaning of each formula
+- Note usage conditions and precautions
+
+## III. Knowledge Map (Text Version)
+- Display the knowledge system as a hierarchical list
+- Clear parent → child node relationships
+
+## IV. Common Question Types and Solution Approaches
+- Predict possible exam questions based on lecture and courseware content
+- Provide solution steps and common pitfalls
+
+## V. Self-Assessment Questions
+- Generate 3-5 self-test questions (with answers)
+- Cover key points and difficult areas
+
+## Style Requirements:
+- Concise language, emphasize key points
+- Suitable for printing and memorization
+- Mark importance level for each knowledge point (★/★★/★★★)

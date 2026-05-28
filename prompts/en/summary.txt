@@ -1,0 +1,8 @@
+Please generate a concise summary of the following course content.
+
+{content}
+
+Requirements:
+1. 200-300 words
+2. Include core themes, key knowledge points, and difficult areas
+3. Suitable as a course introduction or table of contents

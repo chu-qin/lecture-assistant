@@ -1,0 +1,75 @@
+# ============================================================
+# Lecture Assistant 配置文件
+# 复制此文件为 config.yaml 并根据实际情况修改
+# API密钥请勿直接写在配置文件中，使用环境变量引用
+# ============================================================
+
+project:
+  name: "Lecture Assistant"
+  data_dir: "data"
+
+# ----------------------------------------------------------
+# 语音识别 (ASR) 配置
+# ----------------------------------------------------------
+asr:
+  # FunASR模型名称（ModelScope模型ID）
+  model: "iic/SenseVoiceSmall"
+  # 推理设备: "cuda" / "cpu" / "auto"
+  device: "cpu"
+  # 识别语言: "zh" / "en" / "yue" / "auto"
+  language: "zh"
+  # 是否生成时间戳
+  use_timestamps: true
+  batch_size: 1
+
+# ----------------------------------------------------------
+# 文档解析 (Document Parser) 配置
+# ----------------------------------------------------------
+parser:
+  backend: "magic-pdf"
+  enable_formula_recognition: true
+  enable_table_recognition: true
+  output_image_format: "png"
+  # 解析方法: "auto" / "txt" / "ocr"
+  method: "auto"
+
+# ----------------------------------------------------------
+# 大模型 (LLM) 配置 - DeepSeek API
+# ----------------------------------------------------------
+llm:
+  provider: "deepseek"
+  # API密钥（必填）- 从环境变量读取: set DEEPSEEK_API_KEY=sk-xxxx
+  api_key: "${DEEPSEEK_API_KEY}"
+  base_url: "https://api.deepseek.com/v1"
+  # 模型: deepseek-chat (通用) / deepseek-reasoner (推理)
+  model: "deepseek-chat"
+  max_tokens: 4096
+  temperature: 0.3
+  timeout: 120
+
+# ----------------------------------------------------------
+# 文本嵌入 (Embedding) 配置
+# ----------------------------------------------------------
+embedding:
+  model_name: "BAAI/bge-small-zh-v1.5"
+  device: "cpu"
+  normalize: true
+
+# ----------------------------------------------------------
+# ChromaDB 向量数据库配置
+# ----------------------------------------------------------
+chromadb:
+  persist_directory: "data/chroma_db"
+  collection_name: "course_content"
+  chunk_size: 800
+  chunk_overlap: 150
+  distance_metric: "cosine"
+
+# ----------------------------------------------------------
+# 用户界面 (UI) 配置
+# ----------------------------------------------------------
+ui:
+  title: "课堂助手 - Lecture Assistant"
+  layout: "wide"
+  sidebar_state: "expanded"
+  max_upload_size_mb: 500
