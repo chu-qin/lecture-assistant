@@ -51,33 +51,61 @@
 
 ### 1. 环境初始化
 
+**方式 A：一键自动安装**
+
+双击项目目录下的 `setup_env.bat`，脚本会自动完成：
+- 检测 Python 环境
+- 创建虚拟环境 `.venv`
+- 安装所有依赖包
+- 下载 ffmpeg 绿色版
+- 创建数据目录
+
+**方式 B：手动安装**
+
 ```bash
-# 双击 setup_env.bat，或手动执行：
 python -m venv .venv
 .venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-脚本自动完成虚拟环境创建、依赖安装、ffmpeg 绿色版下载。
-
 ### 2. 配置 API Key
 
-编辑 `config.yaml`，或设置环境变量：
+在项目根目录新建 `.env` 文件，写入：
 
-```bash
-set DEEPSEEK_API_KEY=sk-your-key-here
+```
+DEEPSEEK_API_KEY=sk-your-key-here
 ```
 
-注册 [DeepSeek 开放平台](https://platform.deepseek.com/)，在「API Keys」页面创建。语音转写和课件解析不需要 Key 即可使用。
+> 注册 [DeepSeek 开放平台](https://platform.deepseek.com/)，在「API Keys」页面创建 Key，新用户免费赠送额度。
+>
+> `.env` 文件已被 `.gitignore` 排除，不会提交到 GitHub，不用担心泄露。
 
-### 3. 启动
+语音转写和课件解析不需要 Key 即可使用，仅复习资料生成和智能问答需要。
+
+### 3. 创建配置文件
 
 ```bash
+copy config.example.yaml config.yaml
+```
+
+默认配置即可使用。如需使用 OpenAI，修改 `config.yaml` 中 `llm.provider` 为 `"openai"` 并在 `.env` 中追加 `OPENAI_API_KEY`。
+
+### 4. 启动
+
+```bash
+# 双击 start.bat，或在终端执行：
 .venv\Scripts\activate
 streamlit run run.py
 ```
 
-浏览器自动打开 `http://localhost:8501`。左侧边栏创建课程，然后按「资料录入」->「复习与问答」的顺序操作。
+浏览器自动打开 `http://localhost:8501`。
+
+### 5. 使用流程
+
+1. 侧边栏点击「创建课程」，输入课程名称
+2. 进入「资料录入」页面，上传课堂录音或课件文件
+3. 进入「复习与问答」页面，选择复习资料类型，点击生成
+4. 在聊天框中提问，AI 基于课件和录音内容回答
 
 ---
 
