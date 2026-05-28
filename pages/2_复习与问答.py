@@ -40,49 +40,89 @@ def _material_type_short(material_type: str) -> str:
 
 
 def _normalize_latex(content: str) -> str:
-    """标准化 LaTeX 分隔符，自动闭合未配对的 $ 避免 KaTeX 报错。"""
+    """标准化 LaTeX 分隔符，未配对的 $ 转义为 \\$ 避免 KaTeX 报错。
+
+    采用字符级扫描器：正确配对的 $...$ / $$...$$ 保留为数学公式，
+    配对失败的孤立 $ 转义为文本，从而防止 KaTeX 将后续中文当作数学模式解析。
+    """
     import re
 
-    # 将 \( ... \) 替换为 $...$（行内公式）
+    # Step 1: 将 \( ... \) / \[ ... \] 统一为 $...$ / $$...$$
     content = re.sub(r"\\\(\s*", "$", content)
     content = re.sub(r"\s*\\\)", "$", content)
-    # 将 \[ ... \] 替换为 $$...$$（块级公式）
     content = re.sub(r"\\\[\s*", "$$", content)
     content = re.sub(r"\s*\\\]", "$$", content)
-    # 修复中文紧贴 $ 的问题：在中文和 $ 之间加空格
+
+    # Step 2: 修复中文紧贴 $ 的问题
     content = re.sub(r"([一-鿿　-〿＀-￯])\$", r"\1 $", content)
     content = re.sub(r"\$([一-鿿　-〿＀-￯])", r"$ \1", content)
 
-    # 清除 math block 内的 HTML 标签（如 <font color="red">），避免 KaTeX 将其属性引号误解析
-    def _strip_html_in_math(m: re.Match) -> str:
-        return re.sub(r"<[^>]+>", "", m.group(0))
+    # Step 3: 字符级扫描 — 配对 $ / $$，转义孤立 $
+    return _scan_math_delimiters(content)
 
-    content = re.sub(r"\$\$(.+?)\$\$", _strip_html_in_math, content, flags=re.DOTALL)
-    content = re.sub(r"\$(.+?)\$", _strip_html_in_math, content)
 
-    # 自动闭合未配对的 $：LLM 经常输出 "$ formula" 缺闭合 $，导致 KaTeX
-    # 将后续中文全部当作数学模式解析，产生 "Unicode text character used in math mode" 错误。
-    # 逐行检测，$$ 优先匹配，剩余单个 $ 若为奇数则自动在行尾补 $
-    lines = content.split("\n")
+def _scan_math_delimiters(text: str) -> str:
+    """逐字符扫描：匹配 $...$ 和 $$...$$，剥离内部 HTML，转义未闭合的 $。
+
+    规则：
+    - $$ 优先匹配（显示数学），找到最近的闭合 $$ → 保留为 $$...$$
+    - 单个 $ 匹配最近的单个 $（跳过中间的 $$ 块）→ 保留为 $...$
+    - 找不到闭合的 $ / $$ → 转义为 \\$ 或 \\$\\$，KaTeX 不作数学处理
+    - 数学块内部的 HTML 标签会被剥离
+    """
+    import re
+
+    _html_re = re.compile(r"<[^>]+>")
+
     result: list[str] = []
-    in_math = False
-    for line in lines:
-        # 先扣除 $$ 对，再计剩余 $
-        temp = line.replace("$$", "")
-        dollar_count = temp.count("$")
-        if in_math:
-            if dollar_count % 2 == 1:
-                in_math = False
-            result.append(line)
-        else:
-            if dollar_count % 2 == 1:
-                in_math = True
-                line = line.rstrip() + "$"
-            result.append(line)
-    if in_math:
-        result[-1] = result[-1].rstrip() + "$"
+    i = 0
+    n = len(text)
 
-    return "\n".join(result)
+    while i < n:
+        # ---- 显示数学 $$...$$ ----
+        if i + 1 < n and text[i : i + 2] == "$$":
+            closer = text.find("$$", i + 2)
+            if closer != -1:
+                inner = _html_re.sub("", text[i + 2 : closer])
+                result.append("$$" + inner + "$$")
+                i = closer + 2
+            else:
+                result.append("\\$\\$")
+                i += 2
+            continue
+
+        # ---- 行内数学 $...$ ----
+        if text[i] == "$":
+            j = i + 1
+            found = False
+            while j < n:
+                if text[j] == "$":
+                    # 如果这个 $ 是 $$ 的起始，跳过整个 $$ 块继续搜索
+                    if j + 1 < n and text[j : j + 2] == "$$":
+                        closer2 = text.find("$$", j + 2)
+                        if closer2 != -1:
+                            j = closer2 + 2
+                        else:
+                            j += 2
+                        continue
+                    # 找到匹配的单个 $
+                    inner = _html_re.sub("", text[i + 1 : j])
+                    result.append("$" + inner + "$")
+                    i = j + 1
+                    found = True
+                    break
+                j += 1
+
+            if not found:
+                result.append("\\$")
+                i += 1
+            continue
+
+        # ---- 普通文本 ----
+        result.append(text[i])
+        i += 1
+
+    return "".join(result)
 
 
 def _render_markdown(content: str) -> None:
