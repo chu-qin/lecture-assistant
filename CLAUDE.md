@@ -6,148 +6,69 @@
 
 ## 当前进度（截至 2026-05-28）
 
-**当前阶段**：P6 — 工程化收尾 + GitHub 发布准备
+**当前阶段**：P6 — 工程化收尾 + GitHub 发布准备，核心链路全部跑通。
 
-**核心链路全部跑通**。
+已完成里程碑：
+- P0: 安全/日志/依赖 5 个 bug 修复
+- P1: pyproject.toml、ruff/mypy/pytest 配置、course_manager + chroma_store 单元测试（测试 61→149）
+- P4: 多 LLM Provider、移动端响应式、i18n 多语言（中/英 155 keys）、EPUB 书本导入
+- P6: Git 初始化 + GitHub 发布、.env 配置、setup_env.bat/start.bat 中文化
+- UI 优化: 摘要持久化、sticky 布局、KaTeX 字符级扫描器、主题切换修复
+- 测试: 169 passed、ruff 零错误
 
-### 会话 1 完成（P0: 5 个 bug 修复）
-- [x] `config.yaml` 明文 API key → `${DEEPSEEK_API_KEY}`
-- [x] `requirements.txt` 补全 `python-pptx` + `olefile`
-- [x] `run.py` 添加 `logging.basicConfig(level=logging.INFO)`，激活所有 logger
-- [x] `chunker.py:144` 硬编码 800 → `self._chunk_size`（`_split_protected` 从 static method 改为实例方法）
-- [x] `course_manager.py` 5 处静默 `except Exception` 加上 `logger.warning(..., exc_info=True)`
-- [x] `pytest tests/ -v` 61 passed 无回归
+### 后续优化方向
 
-### 会话 2 完成（P1: pyproject.toml）
-- [x] 创建 `pyproject.toml`：含 project metadata、dependencies、dev deps（ruff+mypy+pytest）
-- [x] `requirements.txt` 保留作为过渡（pyproject.toml 成为主声明）
-- [x] ruff 配置：target-version py312, line-length 100, select E/F/I/W/UP, quote-style double
-- [x] mypy 配置：非 strict 模式，check_untyped_defs=true
-- [x] pytest 配置：testpaths = ["tests"]
-- [x] ruff + mypy 已安装到项目 .venv
-- [x] 首次检查结果：ruff 54 个诊断 | ruff format 20 文件待格式化 | mypy 27 个诊断
+#### 高优先级
 
-### 会话 3 完成（P1: ruff format + lint 修复）
-- [x] `ruff format` 格式化全项目 20 个文件
-- [x] `ruff check --fix` 自动修复 20 个问题（unused imports, import sorting, f-strings 等）
-- [x] 手动修复 23 个剩余问题：
-  - E402: `pages/*.py` 和 `src/config.py` 添加 `# noqa: E402`（必须放在 `st.set_page_config()` / 环境变量设置之后，有意为之）
-  - E501: 5 处长字符串换行
-  - E741: `ppt_extractor.py` 中 `l` → `line`
-  - F841: `ppt_extractor.py` 中未使用的 `ver_inst` 加 `_` 前缀
-- [x] `pytest tests/ -v` 61 passed 无回归
-- [x] `ruff check src/ pages/` 零错误
+- **CI/CD**：GitHub Actions 跑 ruff + mypy + pytest，PR 门禁
+- **pre-commit hooks**：本地提交前自动 ruff format + check
+- **Streamlit 集成测试**：用 `streamlit.testing.AppTest` 覆盖页面核心流程（上传文件 → ASR → 生成资料 → 问答）
 
-### 会话 4 完成（P1: course_manager.py 单元测试）
-- [x] Plan Mode 制定测试计划（12 个测试类，55 个测试方法）
-- [x] 新建 `tests/test_course_manager.py`（~430 行）
-- [x] 覆盖所有公开方法：课程 CRUD、状态持久化、聊天历史、复习资料完整生命周期、统计、路径助手、数据类默认值
-- [x] 覆盖边界情况：空名/空白名 ValueError、重复创建幂等、损坏 JSON 恢复、索引过期条目清理、中文名称、特殊字符过滤
-- [x] 发现并修复 bug：`create_course` 调用 `self._save_state()` → `self.save_state()`（方法名错误，导致无法创建课程）
-- [x] `pytest tests/ -v` 116 passed（61 原有 + 55 新增），无回归
-- [x] `ruff check src/ pages/ tests/test_course_manager.py` 零错误
+#### 前端框架迁移（中远期，视需要决定）
 
-### 会话 5 完成（P1: chroma_store.py 单元测试）
-- [x] Plan Mode 制定测试计划（7 个测试类，33 个测试方法）
-- [x] 新建 `tests/test_chroma_store.py`（~350 行）
-- [x] 覆盖所有 7 个方法：init、add_documents、search、delete_collection、count、update_documents、delete_by_id
-- [x] Mock ChromaDB PersistentClient + BaseEmbedder，不启动真实 ChromaDB
-- [x] 发现并修复 bug：`search` 中 `results["documents"]` 括号访问 → `results.get("documents")`（ChromaDB 可能不返回该 key，导致 KeyError）
-- [x] `pytest tests/ -v` 149 passed（116 原有 + 33 新增），无回归
-- [x] `ruff check src/ pages/ tests/test_chroma_store.py` 零错误
+截至 2026-05，Streamlit 存在以下**无法通过 CSS hack 根治**的限制：
 
-### 5 会话路线图完成
-P0 → P1 工程化基础建设完成：
-- P0: 5 个 bug 修复（安全、日志、依赖）
-- P1: pyproject.toml + ruff format/lint + course_manager 测试 + chroma_store 测试
-- 测试从 61 → 149 个，覆盖 config/chunker/embedder/llm/merger/course_manager/chroma_store
-- 源码 bug 修复：`_save_state` 方法名错误、`search` 中 KeyError 风险、`_split_protected` 硬编码 chunk_size
+| 痛点 | 说明 |
+|------|------|
+| **Sticky 定位不可靠** | 左右栏独立滚动 + 标签页/输入框 sticky 完全依赖 CSS `:has()` 选择器和 `position: sticky`，Streamlit 升级可能改变 DOM 结构导致失效 |
+| **KaTeX 报错无容错** | `st.markdown()` 内部启用 KaTeX strict 模式，无法配置关闭。LLM 输出格式稍有偏差（未闭合 `$`、中文紧贴公式等）即大面积报错。当前通过字符级扫描器 `_scan_math_delimiters()` 转义孤立 `$` 来缓解，但仍有极端 case 可能漏过 |
+| **无离线/PWA 能力** | Streamlit 是纯服务端渲染，断网不可用，无法打包为桌面应用 |
+| **组件黑盒** | 无法直接控制 DOM/CSS，自定义 UI 行为全靠 `data-testid` 属性选择器 hack，升级风险高 |
+| **会话状态不持久** | 刷新页面后 session_state 丢失（除课程数据已持久化到磁盘），用户需重新操作 |
 
-### 后续建议方向
-- 补充 `pages/` 中 Streamlit 页面的集成测试（需 streamlit AppTest）
-- 添加 CI/CD（GitHub Actions: ruff + mypy + pytest）
-- 配置 pre-commit hooks
+##### 候选替代框架
 
-### P4 功能增强 — 全部完成 ✅
+| 框架 | 技术栈 | 优势 | 风险 |
+|------|--------|------|------|
+| **NiceGUI** | Python + Vue/Quasar (服务端渲染) | UI 控件丰富（sticky 原生支持），数学公式可用 `ui.markdown()` 或 `ui.math()`，学习曲线平缓，可打包为桌面应用 | 生态较小（14k stars），社区资源少，复杂布局不如 Streamlit 直观 |
+| **Gradio** | Python + Svelte (服务端渲染) | ML 场景成熟（HuggingFace 官方），组件丰富，支持 `gr.Markdown()` 含 LaTeX，天然支持 streaming | 定制化能力弱，多页面/复杂布局不友好，侧边栏导航需自己实现 |
+| **Reflex** (原 Pynecone) | Python → React (编译为 Next.js) | 完全控制前端（React 组件级），数学可用 KaTeX/MathJax 自定义配置，sticky/滚动等原生 DOM 能力，可导出静态站点/PWA | 学习曲线陡（需理解 React 概念），生态最小（15k stars），API 仍在快速变化 |
+| **Dash** (Plotly) | Python + React (服务端渲染) | 企业级成熟度，Plotly 图表原生支持，回调系统清晰，Layout 完全可控 | 重度依赖回调模式（代码量大于声明式），UI 外观偏企业/过时，移动端适配需额外工作 |
 
-### 会话 6 完成（P4-1: 多 LLM Provider 支持）
-- [x] `LLMConfig` 新增 `openai_api_key`、`anthropic_api_key`、`max_retries` 字段
-- [x] `config.yaml` 补全多 provider 注释和字段
-- [x] 新建 `src/llm/openai_llm.py`：OpenAI 原生 API 实现
-- [x] 新建 `src/llm/factory.py`：`get_llm(config)` 根据 provider 分发，预留 `"anthropic"` 扩展点
-- [x] `DeepSeekLLM` 重试次数改用 `config.max_retries`（不再硬编码 3）
-- [x] `pages/2_复习与问答.py` + `test_pipeline.py` 改用 `get_llm()` 工厂
-- [x] `pytest tests/ -v` 149 passed | `ruff check` 零错误
+##### 迁移策略建议
 
-### 会话 7 完成（P4-2: 去除 page_icon emoji）
-- [x] `pages/1_资料录入.py` + `pages/2_复习与问答.py` 中 `page_icon` 改为空字符串
+如果决定迁移，推荐分三步走：
 
-### 会话 8 完成（P4-3: 移动端响应式优化）
-- [x] 新增 `@media (max-width: 480px)` 断点：列强制堆叠、触控目标 44px、标题缩放、内边距收紧
-- [x] 增强 `@media (max-width: 768px)`：侧边栏按钮增大触控区域
+1. **抽离 UI 层接口**（0 风险，可在 Streamlit 内完成）
+   - 定义抽象 UI 层（`BaseUI`），将页面逻辑与框架解耦
+   - 当前 `pages/*.py` 中直接调用 `st.xxx()` 的地方，封装为 `ui.markdown()` / `ui.button()` / `ui.chat_message()` 等
+   - 这一步不改变任何功能，只是代码重构
 
-### 会话 9a 完成（P4-4a: i18n 基础设施 + sidebar/run.py 翻译）
-- [x] 新建 `src/i18n/__init__.py`：`t(key, **kwargs)`、`set_language()`、`get_language()`、`get_available_languages()`
-- [x] 新建 `src/i18n/zh.json`：~45 个中文翻译 key
-- [x] 新建 `src/i18n/en.json`：~45 个英文翻译 key
-- [x] `sidebar.py` 新增语言切换器（selectbox，存储在 `st.session_state.language`）
-- [x] `sidebar.py` 所有 ~25 个用户可见字符串改为 `t()` 调用
-- [x] `run.py` 所有 ~15 个用户可见字符串改为 `t()` 调用
-- [x] 材料类型映射（`_material_type_short`）改用 `t()` 实现中英切换
-- [x] `pytest tests/ -v` 149 passed | `ruff check` 零错误
+2. **选型 PoC**（选 1 个框架做最小可行原型）
+   - 只迁移**一个页面**（建议"复习与问答"，因为它是 sticky + 公式问题的重灾区）
+   - 验证：sticky 效果、公式渲染容错、移动端表现、Chat 组件可用性
+   - 评估标准：DOM 控制力 > 公式渲染容错 > 迁移成本 > 生态成熟度
+   - 当前倾向：**NiceGUI**（平衡控制力和低成本）或 **Reflex**（最大控制力但成本高）
 
-### 会话 9b 完成（P4-4b: 翻译 pages/ 子页面）
-- [x] `pages/1_资料录入.py`：~55 个 UI 字符串改为 `t()` 调用
-- [x] `pages/2_复习与问答.py`：~65 个 UI 字符串改为 `t()` 调用
-- [x] 更新 `_material_type_short`（page 2 本地副本）使用 `t()` 映射
-- [x] LLM prompt 模板（`_build_type_sections` / `_build_generation_prompt`）保持中文不动（发送给 LLM 的提示词）
-- [x] 生成类型选项保持中文不动（用于 prompt 匹配逻辑的 key）
-- [x] `zh.json` / `en.json` 新增 ~110 个翻译 key（总计 ~155 个）
-- [x] 修复 F402: 循环变量 `t` 与 i18n `t()` 重名，重命名为 `tr`
-- [x] `pytest tests/ -v` 149 passed | `ruff check` 零错误
+3. **完整迁移**（PoC 通过后）
+   - 按页面逐一迁移，每迁移一个页面就回归测试
+   - 保留 Streamlit 分支作为回退方案
+   - 目标：sticky/公式问题彻底消失，可打包为桌面应用（Electron/PyInstaller）
 
-### 会话 9c 完成（P4-4c: 翻译 prompts/ 模板）
-- [x] 创建 `prompts/zh/` + `prompts/en/` 子目录，按语言组织 3 个 .txt 模板
-- [x] `prompts/zh/`：原有中文模板（`review_generation.txt`、`summary.txt`、`qa_system.txt`）
-- [x] `prompts/en/`：英译版本（保持相同的 `{variable}` 占位符）
-- [x] `BaseLLM.load_prompt()` 根据当前语言自动选择 `prompts/<lang>/`，CLI 环境默认 zh
-- [x] `summary.txt` 确认无引用（预留模板），一并翻译
-- [x] `pytest tests/ -v` 149 passed | `ruff check` 零错误
+##### 暂不推荐
 
-### 会话 11 完成（P6: 工程化收尾）
-- [x] 初始化 git 仓库 + 首次 commit + push 到 GitHub（`chu-qin/lecture-assistant`）
-- [x] `.gitignore` 新增 `.claude/` 排除（Claude Code 本地权限文件不应提交）
-- [x] `src/config.py` 新增 `load_dotenv()`，启动时自动从 `.env` 文件加载环境变量
-- [x] `setup_env.bat` 全面翻新：中文化 + 步骤 6 交互式 API Key 配置（选择 provider → 输入 key → 自动写入 `.env`）
-- [x] `start.bat` 中文化 + 启动前检查 `.env` 是否存在并提示
-- [x] `README.md` 快速开始章节重写（`.env` 方式 + 5 步使用流程）
-- [x] 修复 3 个配置 bug：
-  - `openai_api_key` / `anthropic_api_key` 缺少默认值导致未配置时启动崩溃 → 加 `${VAR:}` 空默认值
-  - `start.bat` 手动 `start "" http://...` 导致双浏览器窗口 → 删除，只剩 Streamlit 自动打开
-  - `config.example.yaml` 模型名用已废弃的 `deepseek-chat` → 改为 `deepseek-v4-flash`
-- [x] `config.yaml` + `config.example.yaml` 模型注释更新为 V4 系列
-- [x] `pytest tests/ -v` 145 passed（config 13/13）
-- [x] `pyproject.toml` + `requirements.txt` 新增 `ebooklib>=0.17` + `html2text>=2024.2`
-- [x] 新建 `src/parser/epub_parser.py`（~120 行）：EpubParser 类 + get_epub_parser() 工厂
-- [x] EPUB → Markdown：ebooklib 读取元数据/章节，html2text 转换 HTML → Markdown，图片提取到 `images/`
-- [x] 单文件 `.md` 输出到 `parsed_docs/`，与下游 ContentMerger/ChromaDB/页面 2 零改动兼容
-- [x] `src/parser/__init__.py` 导出 EPUB 相关符号
-- [x] `pages/1_资料录入.py` 新增第三个 Tab「书本导入」
-- [x] `src/ui/session_state.py` 新增 `book_results` 默认值 + reset 清理
-- [x] `zh.json` / `en.json` 新增 18 个翻译 key（`page1.tab_book` / `page1.book_*`）
-- [x] `src/parser/mineru_parser.py` streamlit import 改为条件导入（测试兼容）
-- [x] 新建 `tests/test_epub_parser.py`：7 个测试类，20 个测试方法
-- [x] 修复 `test_chunker.py` 中 2 个 F841（未使用变量）
-- [x] `pytest tests/ -v` 169 passed（149 + 20 新增）| `ruff check` 零错误
-
-### P4 功能增强 — 全部完成
-P4 四项全部完成：
-- P4-1: 多 LLM Provider 支持（DeepSeek + OpenAI + 预留 Anthropic）
-- P4-2: 去除 page_icon emoji
-- P4-3: 移动端响应式 CSS（480px + 768px 断点）
-- P4-4: i18n 多语言支持（3 个子会话：基础设施 → 页面翻译 → prompt 模板）
-- 测试始终 149+ passed 无回归
-- 总计新增/修改 ~800 行代码
+- **完全自研前端（React/Vue + FastAPI）**：灵活性最大但成本极高，需同时维护前后端两套代码，对个人项目不划算
+- **Next.js / SvelteKit 等全栈框架**：强迫用 JS/TS 重写全部后端逻辑，工作量大且打破 Python 全栈的统一性
 
 ## 技术栈
 - Python 3.10+, Windows 10+, Streamlit 1.28+
@@ -164,7 +85,7 @@ src/llm/         # LLM 调用：deepseek_llm (OpenAI 兼容接口)
 src/knowledge/   # RAG：chunker (语义分块) + embedder (BGE) + chroma_store
 src/merger/      # 课件+录音内容合并
 src/ui/          # Streamlit 公共组件：sidebar + session_state
-src/i18n/         # 多语言：zh.json + en.json + t() 函数
+src/i18n/        # 多语言：zh.json + en.json + t() 函数
 pages/           # Streamlit 2 个子页面 (1-2)
 prompts/         # LLM 提示词模板，按语言分子目录 (zh/ + en/)
 tools/           # ffmpeg 绿色版、LibreOffice 便携版

@@ -151,9 +151,10 @@ lecture-assistant/
 ├── prompts/
 │   ├── zh/                         # 中文 Prompt 模板
 │   └── en/                         # 英文 Prompt 模板
-├── tests/                          # 149 个单元测试
+├── tests/                          # 169 个单元测试
 ├── config.yaml                     # 用户配置（gitignore）
 ├── config.example.yaml             # 配置模板
+├── LICENSE                         # MIT
 ├── pyproject.toml                  # 项目元数据 + ruff/mypy/pytest 配置
 ├── requirements.txt                # Python 依赖
 ├── setup_env.bat                   # 一键环境初始化
@@ -186,20 +187,27 @@ lecture-assistant/
 # 语音识别
 asr:
   model: "iic/SenseVoiceSmall"
-  device: "cpu"           # cpu / cuda
-  language: "zh"          # zh / en / auto
+  device: "cpu"           # cpu / cuda / auto
+  language: "zh"          # zh / en / yue / auto
+  use_timestamps: true
 
 # 文档解析
 parser:
+  backend: "magic-pdf"
   method: "auto"          # auto / txt / ocr
 
-# LLM
+# LLM (支持 DeepSeek / OpenAI)
 llm:
   provider: "deepseek"    # deepseek / openai
   api_key: "${DEEPSEEK_API_KEY}"
-  model: "deepseek-chat"
+  openai_api_key: "${OPENAI_API_KEY:}"        # 使用 OpenAI 时填写
+  anthropic_api_key: "${ANTHROPIC_API_KEY:}"  # 预留
+  base_url: "https://api.deepseek.com"
+  model: "deepseek-v4-flash"    # deepseek-v4-flash (快速) / deepseek-v4-pro (旗舰)
   temperature: 0.3
+  max_tokens: 4096
   max_retries: 3
+  timeout: 120
 
 # 文本嵌入
 embedding:
