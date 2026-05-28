@@ -20,8 +20,8 @@
 
 #### 高优先级
 
-- **CI/CD**：GitHub Actions 跑 ruff + mypy + pytest，PR 门禁
-- **pre-commit hooks**：本地提交前自动 ruff format + check
+- [x] **CI/CD**：GitHub Actions 跑 ruff + mypy + pytest，PR 门禁（`.github/workflows/ci.yml`）
+- [x] **pre-commit hooks**：本地提交前自动 ruff format + check（`.pre-commit-config.yaml`）
 - **Streamlit 集成测试**：用 `streamlit.testing.AppTest` 覆盖页面核心流程（上传文件 → ASR → 生成资料 → 问答）
 
 #### 前端框架迁移（中远期，视需要决定）

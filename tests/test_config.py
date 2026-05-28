@@ -1,6 +1,5 @@
 """测试配置模块"""
 
-
 import pytest
 
 from src.config import (
@@ -18,10 +17,12 @@ from src.config import (
 # 辅助：每次测试后重置单例，避免测试间泄漏
 # ============================================================
 
+
 @pytest.fixture(autouse=True)
 def _reset_config_singleton(monkeypatch):
     """每次测试前后重置全局配置单例和 PROJECT_ROOT。"""
     import src.config as cfg
+
     cfg._config = None
     yield
     cfg._config = None
@@ -31,8 +32,10 @@ def _reset_config_singleton(monkeypatch):
 # 已有测试
 # ============================================================
 
+
 def test_resolve_env_vars_basic():
     import os
+
     os.environ["TEST_VAR"] = "test_value"
     result = _resolve_env_vars("${TEST_VAR}")
     assert result == "test_value"
@@ -64,15 +67,19 @@ def test_get_project_root():
 # 新增：YAML 加载与单例行为
 # ============================================================
 
+
 def test_get_config_loads_yaml(tmp_path):
     yaml_file = tmp_path / "test_config.yaml"
-    yaml_file.write_text("""
+    yaml_file.write_text(
+        """
 project:
   name: 测试课程
 llm:
   model: custom-model
   temperature: 0.5
-""", encoding="utf-8")
+""",
+        encoding="utf-8",
+    )
 
     config = reload_config(yaml_file)
     assert config.project.name == "测试课程"
@@ -135,12 +142,14 @@ def test_dict_to_dataclass_nested():
     assert result.asr.device == "cuda"
     # 未传入的字段使用 dataclass 默认值
     from src.config import LLMConfig
+
     default_llm = LLMConfig()
     assert result.llm.api_key == default_llm.api_key
 
 
 def test_resolve_config_dict_nested():
     import os
+
     os.environ["TEST_NESTED_KEY"] = "resolved_value"
     data = {
         "llm": {

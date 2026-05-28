@@ -72,9 +72,7 @@ for i, c_name in enumerate(courses):
     with course_cols[i % 4]:
         is_current = c_name == current_course
         stats = cm.get_review_stats(c_name)
-        status_text = (
-            t("status.ready") if stats["vector_store_ready"] else t("status.not_built")
-        )
+        status_text = t("status.ready") if stats["vector_store_ready"] else t("status.not_built")
         marker = "> " if is_current else ""
         card_text = t(
             "app.course_card",

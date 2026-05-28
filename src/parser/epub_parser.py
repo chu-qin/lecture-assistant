@@ -112,9 +112,7 @@ class EpubParser(BaseParser):
         md_lines.append("\n\n".join(chapters))
         markdown_content = "\n".join(md_lines)
 
-        safe_name = (
-            "".join(c for c in title if c.isalnum() or c in " _-").strip() or file_path.stem
-        )
+        safe_name = "".join(c for c in title if c.isalnum() or c in " _-").strip() or file_path.stem
         md_file = output_dir / f"{safe_name}.md"
         md_file.write_text(markdown_content, encoding="utf-8")
 

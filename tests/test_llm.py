@@ -27,9 +27,14 @@ def llm_config():
     )
 
 
-def _make_mock_response(content="Hello", model="test-model",
-                        prompt_tokens=10, completion_tokens=5, total_tokens=15,
-                        finish_reason="stop"):
+def _make_mock_response(
+    content="Hello",
+    model="test-model",
+    prompt_tokens=10,
+    completion_tokens=5,
+    total_tokens=15,
+    finish_reason="stop",
+):
     """构造一个模拟的 OpenAI API 响应对象。"""
     mock = MagicMock()
     mock.choices = [MagicMock()]
@@ -86,9 +91,7 @@ class TestChat:
     def test_chat_retry_exhausted_authentication(self, llm_config):
         with patch("src.llm.deepseek_llm.OpenAI") as mock_openai:
             mock_client = MagicMock()
-            mock_client.chat.completions.create.side_effect = Exception(
-                "401 authentication failed"
-            )
+            mock_client.chat.completions.create.side_effect = Exception("401 authentication failed")
             mock_openai.return_value = mock_client
 
             llm = DeepSeekLLM(llm_config)
@@ -100,9 +103,7 @@ class TestChat:
     def test_chat_retry_exhausted_rate_limit(self, llm_config):
         with patch("src.llm.deepseek_llm.OpenAI") as mock_openai:
             mock_client = MagicMock()
-            mock_client.chat.completions.create.side_effect = Exception(
-                "429 rate limit exceeded"
-            )
+            mock_client.chat.completions.create.side_effect = Exception("429 rate limit exceeded")
             mock_openai.return_value = mock_client
 
             llm = DeepSeekLLM(llm_config)
@@ -114,9 +115,7 @@ class TestChat:
     def test_chat_retry_exhausted_timeout(self, llm_config):
         with patch("src.llm.deepseek_llm.OpenAI") as mock_openai:
             mock_client = MagicMock()
-            mock_client.chat.completions.create.side_effect = Exception(
-                "request timeout"
-            )
+            mock_client.chat.completions.create.side_effect = Exception("request timeout")
             mock_openai.return_value = mock_client
 
             llm = DeepSeekLLM(llm_config)
@@ -128,9 +127,7 @@ class TestChat:
     def test_chat_retry_exhausted_generic(self, llm_config):
         with patch("src.llm.deepseek_llm.OpenAI") as mock_openai:
             mock_client = MagicMock()
-            mock_client.chat.completions.create.side_effect = Exception(
-                "unknown internal error"
-            )
+            mock_client.chat.completions.create.side_effect = Exception("unknown internal error")
             mock_openai.return_value = mock_client
 
             llm = DeepSeekLLM(llm_config)
@@ -236,9 +233,7 @@ class TestStreamChat:
         """3 次失败后，生成器产生 [错误] 标记。"""
         with patch("src.llm.deepseek_llm.OpenAI") as mock_openai:
             mock_client = MagicMock()
-            mock_client.chat.completions.create.side_effect = Exception(
-                "401 unauthorized"
-            )
+            mock_client.chat.completions.create.side_effect = Exception("401 unauthorized")
             mock_openai.return_value = mock_client
 
             llm = DeepSeekLLM(llm_config)

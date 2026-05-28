@@ -322,9 +322,7 @@ def _run_generation(
                 )
             )
             col_resume, col_discard = st.columns(2)
-            if col_resume.button(
-                t("page2.resume"), type="primary", use_container_width=True
-            ):
+            if col_resume.button(t("page2.resume"), type="primary", use_container_width=True):
                 full_output = ckpt.get("full_output", "")
                 saved_generate_types = ckpt.get("generate_types", generate_types)
                 saved_custom_extra = ckpt.get("custom_extra", custom_extra)
@@ -732,9 +730,7 @@ with left_col:
 
                     content = cm.load_review_material(current, m.filename)
                     if content:
-                        st.caption(
-                            f"{m.display_name} · {m.created_at[:10]} · {m.char_count:,} 字"
-                        )
+                        st.caption(f"{m.display_name} · {m.created_at[:10]} · {m.char_count:,} 字")
                         st.divider()
                         with st.container():
                             _render_markdown(content)
@@ -787,9 +783,7 @@ with right_col:
         else:
             kb_col1.warning(t("page2.kb_not_ready"))
 
-        if kb_col2.button(
-            t("page2.build_kb"), use_container_width=True, disabled=vs_ready
-        ):
+        if kb_col2.button(t("page2.build_kb"), use_container_width=True, disabled=vs_ready):
             with st.spinner(t("page2.building_kb")):
                 try:
                     _build_kb_from_sources(
@@ -830,7 +824,7 @@ with right_col:
                             for src in msg["sources"]:
                                 st.caption(
                                     f"**{src.get('source_file', t('common.unknown'))}** | "
-                                    f"{t('page2.similarity', score=f'{src.get('score', 0):.2f}')}"
+                                    f"{t('page2.similarity', score=f'{src.get("score", 0):.2f}')}"
                                 )
                                 st.text(src.get("content", "")[:300])
         else:
@@ -844,9 +838,7 @@ with right_col:
                 cm.save_chat_history(current, [])
                 st.rerun()
             with c2:
-                export_text = "\n\n".join(
-                    f"**{m['role']}**: {m['content']}" for m in chat_history
-                )
+                export_text = "\n\n".join(f"**{m['role']}**: {m['content']}" for m in chat_history)
                 st.download_button(
                     t("page2.export_chat"),
                     data=export_text.encode("utf-8"),
@@ -901,9 +893,7 @@ with right_col:
                         )
                         sources.append(
                             {
-                                "source_file": r.metadata.get(
-                                    "source_file", t("common.unknown")
-                                ),
+                                "source_file": r.metadata.get("source_file", t("common.unknown")),
                                 "source_type": source_type,
                                 "score": round(r.score, 4),
                                 "content": r.content,

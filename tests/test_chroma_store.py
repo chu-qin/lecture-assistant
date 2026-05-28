@@ -52,9 +52,7 @@ def mock_collection():
 def store(chroma_config, mock_embedder, mock_collection, tmp_path):
     """返回使用 mock 依赖的 ChromaVectorStore。"""
     chroma_config.persist_directory = str(tmp_path / "chroma_db")
-    with patch(
-        "src.knowledge.chroma_store.chromadb.PersistentClient"
-    ) as mock_client_cls:
+    with patch("src.knowledge.chroma_store.chromadb.PersistentClient") as mock_client_cls:
         mock_client_cls.return_value.get_or_create_collection.return_value = mock_collection
         yield ChromaVectorStore(chroma_config, mock_embedder)
 

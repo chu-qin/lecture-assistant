@@ -8,8 +8,13 @@ from src.parser.base import ParserError, UnsupportedFormatError
 from src.parser.epub_parser import EpubParser, get_epub_parser
 
 
-def _make_epub(tmp_path: Path, title: str = "Test Book", author: str = "Test Author",
-               chapters: list[str] | None = None, add_images: bool = False) -> Path:
+def _make_epub(
+    tmp_path: Path,
+    title: str = "Test Book",
+    author: str = "Test Author",
+    chapters: list[str] | None = None,
+    add_images: bool = False,
+) -> Path:
     """Helper: create a minimal EPUB file for testing."""
     from ebooklib import epub
 
@@ -21,8 +26,10 @@ def _make_epub(tmp_path: Path, title: str = "Test Book", author: str = "Test Aut
         book.add_author(author)
 
     if chapters is None:
-        chapters = ["<h1>Chapter 1</h1><p>Content of chapter one.</p>",
-                     "<h1>Chapter 2</h1><p>Content of <b>chapter</b> two.</p>"]
+        chapters = [
+            "<h1>Chapter 1</h1><p>Content of chapter one.</p>",
+            "<h1>Chapter 2</h1><p>Content of <b>chapter</b> two.</p>",
+        ]
 
     spine = ["nav"]
     toc = []

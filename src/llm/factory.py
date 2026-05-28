@@ -20,11 +20,8 @@ def get_llm(config: LLMConfig) -> BaseLLM:
     elif provider == "openai":
         return OpenAILLM(config)
     elif provider == "anthropic":
-        raise NotImplementedError(
-            "Anthropic Claude provider 尚未实现。请使用 deepseek 或 openai。"
-        )
+        raise NotImplementedError("Anthropic Claude provider 尚未实现。请使用 deepseek 或 openai。")
     else:
         raise ValueError(
-            f"未知的 LLM provider: '{config.provider}'。"
-            "支持: deepseek, openai, anthropic (预留)"
+            f"未知的 LLM provider: '{config.provider}'。支持: deepseek, openai, anthropic (预留)"
         )

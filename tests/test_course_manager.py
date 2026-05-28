@@ -458,7 +458,7 @@ class TestSafeName:
         assert result == "abc_123-测试.(ok) （中文）"
 
     def test_filters_path_separators(self):
-        result = CourseManager._safe_name("a/b\\c:d*e?f\"g<h>i|j")
+        result = CourseManager._safe_name('a/b\\c:d*e?f"g<h>i|j')
         assert "/" not in result
         assert "\\" not in result
         assert ":" not in result

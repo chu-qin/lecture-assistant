@@ -87,9 +87,7 @@ class BaseLLM(ABC):
             prompt_path = prompt_dir / "zh" / prompt_name
 
         if not prompt_path.exists():
-            raise PromptNotFoundError(
-                f"Prompt template not found: {prompt_path}"
-            )
+            raise PromptNotFoundError(f"Prompt template not found: {prompt_path}")
 
         template = prompt_path.read_text(encoding="utf-8")
         return template.format(**variables)

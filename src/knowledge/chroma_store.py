@@ -84,14 +84,10 @@ class ChromaVectorStore(BaseVectorStore):
             search_results.append(
                 SearchResult(
                     content=(
-                        results.get("documents", [[""]])[0][i]
-                        if results.get("documents")
-                        else ""
+                        results.get("documents", [[""]])[0][i] if results.get("documents") else ""
                     ),
                     metadata=(
-                        results.get("metadatas", [[{}]])[0][i]
-                        if results.get("metadatas")
-                        else {}
+                        results.get("metadatas", [[{}]])[0][i] if results.get("metadatas") else {}
                     ),
                     score=(
                         1.0 - results.get("distances", [[0.0]])[0][i]

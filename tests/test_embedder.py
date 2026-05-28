@@ -32,8 +32,7 @@ class TestEmbed:
     """SentenceTransformersEmbedder.embed() 单元测试。"""
 
     def test_embed_calls_model(self, emb_config, mock_st_model):
-        with patch("src.knowledge.embedder.SentenceTransformer",
-                   return_value=mock_st_model):
+        with patch("src.knowledge.embedder.SentenceTransformer", return_value=mock_st_model):
             embedder = SentenceTransformersEmbedder(emb_config)
             result = embedder.embed(["text1", "text2"])
 
@@ -47,8 +46,7 @@ class TestEmbed:
         assert call_kwargs[1]["show_progress_bar"] is False
 
     def test_embed_query_applies_prefix(self, emb_config, mock_st_model):
-        with patch("src.knowledge.embedder.SentenceTransformer",
-                   return_value=mock_st_model):
+        with patch("src.knowledge.embedder.SentenceTransformer", return_value=mock_st_model):
             embedder = SentenceTransformersEmbedder(emb_config)
             embedder.embed_query("测试查询")
 
@@ -57,8 +55,7 @@ class TestEmbed:
         assert "测试查询" in call_args[0]
 
     def test_embed_empty_list(self, emb_config, mock_st_model):
-        with patch("src.knowledge.embedder.SentenceTransformer",
-                   return_value=mock_st_model):
+        with patch("src.knowledge.embedder.SentenceTransformer", return_value=mock_st_model):
             embedder = SentenceTransformersEmbedder(emb_config)
             result = embedder.embed([])
 
@@ -66,38 +63,35 @@ class TestEmbed:
         mock_st_model.encode.assert_not_called()
 
     def test_dimension_property(self, emb_config, mock_st_model):
-        with patch("src.knowledge.embedder.SentenceTransformer",
-                   return_value=mock_st_model):
+        with patch("src.knowledge.embedder.SentenceTransformer", return_value=mock_st_model):
             embedder = SentenceTransformersEmbedder(emb_config)
 
         assert embedder.dimension == 512
 
     def test_embedder_load_failure(self, emb_config):
-        with patch("src.knowledge.embedder.SentenceTransformer",
-                   side_effect=RuntimeError("模型下载失败")):
+        with patch(
+            "src.knowledge.embedder.SentenceTransformer", side_effect=RuntimeError("模型下载失败")
+        ):
             with pytest.raises(EmbeddingError, match="模型下载失败"):
                 SentenceTransformersEmbedder(emb_config)
 
     def test_embed_encode_failure(self, emb_config, mock_st_model):
         mock_st_model.encode.side_effect = RuntimeError("encode error")
-        with patch("src.knowledge.embedder.SentenceTransformer",
-                   return_value=mock_st_model):
+        with patch("src.knowledge.embedder.SentenceTransformer", return_value=mock_st_model):
             embedder = SentenceTransformersEmbedder(emb_config)
             with pytest.raises(EmbeddingError, match="encode error"):
                 embedder.embed(["text"])
 
     def test_embed_query_encode_failure(self, emb_config, mock_st_model):
         mock_st_model.encode.side_effect = RuntimeError("query error")
-        with patch("src.knowledge.embedder.SentenceTransformer",
-                   return_value=mock_st_model):
+        with patch("src.knowledge.embedder.SentenceTransformer", return_value=mock_st_model):
             embedder = SentenceTransformersEmbedder(emb_config)
             with pytest.raises(EmbeddingError, match="query error"):
                 embedder.embed_query("query")
 
     def test_normalize_false(self, emb_config, mock_st_model):
         emb_config.normalize = False
-        with patch("src.knowledge.embedder.SentenceTransformer",
-                   return_value=mock_st_model):
+        with patch("src.knowledge.embedder.SentenceTransformer", return_value=mock_st_model):
             embedder = SentenceTransformersEmbedder(emb_config)
             embedder.embed(["text"])
 

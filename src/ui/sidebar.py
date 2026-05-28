@@ -128,12 +128,8 @@ def render_sidebar() -> None:
                 transcripts=stats["transcripts"],
             )
         )
-        status_text = (
-            t("status.ready") if stats["vector_store_ready"] else t("status.not_built")
-        )
-        st.caption(
-            t("sidebar.stats_line2", count=stats["review_materials"], status=status_text)
-        )
+        status_text = t("status.ready") if stats["vector_store_ready"] else t("status.not_built")
+        st.caption(t("sidebar.stats_line2", count=stats["review_materials"], status=status_text))
 
 
 def _render_current_course(cm, course: str) -> None:

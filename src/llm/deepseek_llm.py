@@ -66,8 +66,7 @@ class DeepSeekLLM(BaseLLM):
             except Exception as e:
                 last_error = e
                 logger.warning(
-                    "API 调用失败 (尝试 %d/%d): %s",
-                    attempt + 1, self._config.max_retries, e
+                    "API 调用失败 (尝试 %d/%d): %s", attempt + 1, self._config.max_retries, e
                 )
                 if attempt < self._config.max_retries - 1:
                     time.sleep(2**attempt)
@@ -99,8 +98,7 @@ class DeepSeekLLM(BaseLLM):
             except Exception as e:
                 last_error = e
                 logger.warning(
-                    "流式 API 调用失败 (尝试 %d/%d): %s",
-                    attempt + 1, self._config.max_retries, e
+                    "流式 API 调用失败 (尝试 %d/%d): %s", attempt + 1, self._config.max_retries, e
                 )
                 if attempt < self._config.max_retries - 1:
                     time.sleep(2**attempt)

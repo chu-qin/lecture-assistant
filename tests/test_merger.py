@@ -1,6 +1,5 @@
 """测试 ContentMerger — 课件与转录内容合并逻辑。"""
 
-
 import pytest
 
 from src.merger.content_merger import ContentMerger, MergedContent

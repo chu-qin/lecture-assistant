@@ -169,7 +169,7 @@ class FunASRSenseVoiceASR(BaseASR):
                         def _flatten(lst):
                             for elem in lst:
                                 if isinstance(elem, list) and len(elem) > 0:
-                                    if isinstance(elem[0], (int, float)):
+                                    if isinstance(elem[0], int | float):
                                         flat_ts.append(elem)
                                     else:
                                         _flatten(elem)

@@ -149,9 +149,7 @@ with tab_asr:
                             "请用一句话（不超过50字）概括以下课堂录音的主要内容：\n\n"
                             + full_asr_text[:2000]
                         )
-                        summary_resp = llm.chat(
-                            [{"role": "user", "content": summary_prompt}]
-                        )
+                        summary_resp = llm.chat([{"role": "user", "content": summary_prompt}])
                         summary_text = summary_resp.content
                         set_state("asr_summary", summary_text)
                         # 持久化摘要到文件（每个文件一份）
@@ -214,9 +212,7 @@ with tab_asr:
                     col_name.caption(f"    {summary_text}")
                 else:
                     col_name.caption(f"  {display_name}")
-                if col_del.button(
-                    "删除", key=f"del_tx_{txt_file.stem}"
-                ):
+                if col_del.button("删除", key=f"del_tx_{txt_file.stem}"):
                     # 删除对应的音频文件、转录文件和摘要
                     audio_name = txt_file.stem.replace("_transcript", "")
                     for ext in [".mp3", ".wav", ".m4a", ".flac", ".ogg"]:
@@ -238,16 +234,12 @@ with tab_asr:
         total_duration = sum(r["result"].duration_seconds for r in success_results)
 
         info_cols = st.columns(4)
-        info_cols[0].metric(
-            t("page1.file_count"), f"{len(success_results)}/{len(asr_results)}"
-        )
+        info_cols[0].metric(t("page1.file_count"), f"{len(success_results)}/{len(asr_results)}")
         info_cols[1].metric(t("page1.total_chars"), total_chars)
         info_cols[2].metric(t("page1.total_segments"), total_segments)
         info_cols[3].metric(t("page1.total_duration"), f"{total_duration / 60:.1f} min")
 
-        tab_names = [
-            f"{'OK' if r['result'] else 'FAIL'} {r['name'][:20]}" for r in asr_results
-        ]
+        tab_names = [f"{'OK' if r['result'] else 'FAIL'} {r['name'][:20]}" for r in asr_results]
         tabs = st.tabs(tab_names)
         for tab, r in zip(tabs, asr_results):
             with tab:
@@ -256,9 +248,7 @@ with tab_asr:
                     sub_cols = st.columns(3)
                     sub_cols[0].metric(t("page1.chars"), len(res.full_text))
                     sub_cols[1].metric(t("page1.segments"), len(res.segments))
-                    sub_cols[2].metric(
-                        t("page1.duration"), f"{res.duration_seconds / 60:.1f} min"
-                    )
+                    sub_cols[2].metric(t("page1.duration"), f"{res.duration_seconds / 60:.1f} min")
 
                     st.text_area(
                         t("page1.transcript_text"),
@@ -274,31 +264,33 @@ with tab_asr:
                         key=f"dl_{r['name']}",
                     )
                 else:
-                    st.error(
-                        t("page1.parse_fail", error=r.get("error", t("common.unknown_error")))
-                    )
+                    st.error(t("page1.parse_fail", error=r.get("error", t("common.unknown_error"))))
 
         # AI 修正结果显示
         corrected = get_state("asr_corrected", "")
         if corrected and success_results:
             full_asr_text = "\n\n".join(
-                f"## {r['name']}\n\n{r['result'].full_text}"
-                for r in success_results
-                if r["result"]
+                f"## {r['name']}\n\n{r['result'].full_text}" for r in success_results if r["result"]
             )
             with st.expander("查看 AI 修正结果", expanded=True):
                 col_orig, col_corr = st.columns(2)
                 with col_orig:
                     st.caption("原始转录")
                     st.text_area(
-                        "原始", value=full_asr_text[:3000], height=400,
-                        key="corr_orig", label_visibility="collapsed"
+                        "原始",
+                        value=full_asr_text[:3000],
+                        height=400,
+                        key="corr_orig",
+                        label_visibility="collapsed",
                     )
                 with col_corr:
                     st.caption("修正后")
                     st.text_area(
-                        "修正", value=corrected[:3000], height=400,
-                        key="corr_corr", label_visibility="collapsed"
+                        "修正",
+                        value=corrected[:3000],
+                        height=400,
+                        key="corr_corr",
+                        label_visibility="collapsed",
                     )
 
                 col_confirm, col_discard = st.columns(2)
@@ -338,9 +330,7 @@ with tab_parser:
             parse_method = st.selectbox(t("page1.parse_method"), ["auto", "txt", "ocr"], index=0)
 
         col1, col2, _ = st.columns([1, 1, 4])
-        start_btn = col1.button(
-            t("page1.start_parse"), type="primary", use_container_width=True
-        )
+        start_btn = col1.button(t("page1.start_parse"), type="primary", use_container_width=True)
         clear_btn = col2.button(t("page1.clear_all"), use_container_width=True)
 
         if clear_btn:
@@ -484,9 +474,7 @@ with tab_book:
         st.info(t("page1.book_uploaded_count", count=len(uploaded_books)))
 
         col1, col2, _ = st.columns([1, 1, 4])
-        start_btn = col1.button(
-            t("page1.book_import"), type="primary", use_container_width=True
-        )
+        start_btn = col1.button(t("page1.book_import"), type="primary", use_container_width=True)
         clear_btn = col2.button(t("page1.clear_all"), use_container_width=True, key="book_clear")
 
         if clear_btn:
@@ -586,9 +574,7 @@ with tab_book:
                     info_cols[1].metric(
                         t("page1.book_author"), meta.get("author", t("common.unknown"))
                     )
-                    info_cols[2].metric(
-                        t("page1.book_chapters"), meta.get("chapter_count", 0)
-                    )
+                    info_cols[2].metric(t("page1.book_chapters"), meta.get("chapter_count", 0))
 
                     with st.expander(t("page1.book_preview"), expanded=False):
                         preview = result.markdown_content[:5000]
@@ -597,9 +583,7 @@ with tab_book:
                         st.markdown(preview)
 
                     if result.images:
-                        st.caption(
-                            t("page1.book_images", count=len(result.images))
-                        )
+                        st.caption(t("page1.book_images", count=len(result.images)))
                         img_cols = st.columns(min(len(result.images), 4))
                         for j, img_path in enumerate(result.images[:8]):
                             try:
@@ -620,6 +604,4 @@ with tab_book:
                         key=f"dl_book_{file_name}",
                     )
                 elif result.metadata.get("error"):
-                    st.error(
-                        t("page1.book_import_fail", error=result.metadata["error"])
-                    )
+                    st.error(t("page1.book_import_fail", error=result.metadata["error"]))

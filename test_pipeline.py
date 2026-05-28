@@ -1,4 +1,5 @@
 """完整流程测试脚本：信号与系统"""
+
 import sys
 from pathlib import Path
 
@@ -66,7 +67,9 @@ for af in audio_files:
         result = asr.transcribe(audio_path)
         transcript_path = cm.sub_dir(course_name, "transcripts") / f"{af.stem}_transcript.txt"
         asr.save_transcript(result, transcript_path)
-        print(f"  OK! 字数: {len(result.full_text)}, 片段: {len(result.segments)}, 时长: {result.duration_seconds:.0f}s")
+        print(
+            f"  OK! 字数: {len(result.full_text)}, 片段: {len(result.segments)}, 时长: {result.duration_seconds:.0f}s"
+        )
 
         # 保存前300字预览
         preview = result.full_text[:300]
@@ -91,7 +94,9 @@ for pf in ppt_files:
     print(f"\n解析: {pf.name} ...")
     try:
         result = parser.parse(ppt_path, output_dir)
-        print(f"  OK! 公式: {result.formulas_count}, 表格: {result.tables_count}, 图片: {len(result.images)}")
+        print(
+            f"  OK! 公式: {result.formulas_count}, 表格: {result.tables_count}, 图片: {len(result.images)}"
+        )
         preview = result.markdown_content[:300].replace("\n", " ")
         print(f"  预览: {preview}...")
     except Exception as e:
@@ -172,9 +177,9 @@ else:
 # ====================================================================
 print("\n\n========== Step 6: 知识库构建 ==========")
 
+from src.knowledge.chroma_store import ChromaVectorStore
 from src.knowledge.chunker import MarkdownChunker
 from src.knowledge.embedder import SentenceTransformersEmbedder
-from src.knowledge.chroma_store import ChromaVectorStore
 
 try:
     print("加载 Embedding 模型...")
@@ -212,7 +217,7 @@ try:
 
         # 测试检索
         results = store.search("信号与系统的基本概念", top_k=3)
-        print(f"\n检索测试 (top 3):")
+        print("\n检索测试 (top 3):")
         for r in results:
             print(f"  [{r.score:.4f}] {r.content[:100]}...")
     else:
@@ -222,4 +227,5 @@ try:
 except Exception as e:
     print(f"FAIL: {e}")
     import traceback
+
     traceback.print_exc()
