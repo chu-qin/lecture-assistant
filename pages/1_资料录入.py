@@ -283,6 +283,9 @@ with tab_asr:
                         key="corr_orig",
                         label_visibility="collapsed",
                     )
+                    if st.button("放弃修正", use_container_width=True):
+                        set_state("asr_corrected", "")
+                        st.rerun()
                 with col_corr:
                     st.caption("修正后")
                     st.text_area(
@@ -292,20 +295,18 @@ with tab_asr:
                         key="corr_corr",
                         label_visibility="collapsed",
                     )
-
-                col_confirm, col_discard = st.columns(2)
-                if col_confirm.button(
-                    "确认修正，更新知识库文本", type="primary", use_container_width=True
-                ):
-                    state = cm.load_state(current)
-                    state.transcript_text = corrected
-                    cm.save_state(current, state)
-                    set_state("asr_corrected_confirmed", True)
-                    st.success("已更新，知识库将使用修正后的文本")
-                    st.rerun()
-                if col_discard.button("放弃修正", use_container_width=True):
-                    set_state("asr_corrected", "")
-                    st.rerun()
+                    if st.button(
+                        "确认修正，更新知识库文本", type="primary", use_container_width=True
+                    ):
+                        state = cm.load_state(current)
+                        state.transcript_text = corrected
+                        cm.save_state(current, state)
+                        tx_dir = cm.sub_dir(current, "transcripts")
+                        corrected_path = tx_dir / "_transcript_corrected.txt"
+                        corrected_path.write_text(corrected, encoding="utf-8")
+                        set_state("asr_corrected_confirmed", True)
+                        st.success("已更新，知识库将使用修正后的文本")
+                        st.rerun()
 
         # 检查是否已确认修正
         if get_state("asr_corrected_confirmed", False):

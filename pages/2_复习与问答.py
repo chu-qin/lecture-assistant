@@ -214,6 +214,47 @@ def _build_type_sections(generate_types: list[str]) -> list[str]:
     return sections
 
 
+# 中文数字 → 资料类型映射（用于拆分 LLM 输出）
+_CN_SECTION_MAP = {"一": "复习提纲", "二": "详细笔记", "三": "知识结构图", "四": "自测题库"}
+_CN_NUMS = "一二三四五六七八九十"
+
+
+def _split_by_sections(full_output: str, generate_types: list[str]) -> list[tuple[str, str]]:
+    """按 ## N、section 标题拆分 LLM 输出，返回 [(type_name, content), ...]。
+
+    只保留 generate_types 中已勾选的类型，按原始顺序返回。
+    """
+    import re
+
+    pattern = r"\n(?=## [" + _CN_NUMS + r"]、)"
+    raw_parts = re.split(pattern, full_output)
+
+    result: list[tuple[str, str]] = []
+    seen_types: set[str] = set()
+    for part in raw_parts:
+        part = part.strip()
+        if not part:
+            continue
+        m = re.match(r"## ([" + _CN_NUMS + r"])、", part)
+        if not m:
+            if result:
+                name, content = result[0]
+                result[0] = (name, content + "\n\n" + part)
+            continue
+        cn = m.group(1)
+        type_name = _CN_SECTION_MAP.get(cn)
+        # 去重：同名章节只保留第一次出现
+        if (
+            type_name
+            and type_name not in seen_types
+            and any(type_name in gt for gt in generate_types)
+        ):
+            seen_types.add(type_name)
+            result.append((type_name, part))
+
+    return result
+
+
 def _build_generation_prompt(
     merged_content: str, generate_types: list[str], custom_extra: str
 ) -> str:
@@ -235,17 +276,18 @@ def _build_generation_prompt(
 - 每道题附详细解析，解析中可简要提及所考查的知识点
 - 题目难度应有梯度，覆盖基础概念到综合应用"""
     else:
-        task_desc = (
-            "你是一位经验丰富的大学教师，正在为学生准备复习资料。"
-            "请根据以下课堂内容，生成完整的复习材料。"
-        )
+        task_desc = "你是一位复习资料整理专家。请根据以下课堂内容，生成完整的复习材料。"
         global_reqs = """## 全局要求
 - 使用 Markdown 排版，标题层级清晰（##、###、####）
 - 所有数学公式使用 LaTeX（行内 $...$，独立公式 $$...$$）
 - 关键术语首次出现时加粗
 - 内容务必详尽完整，不要为了简短而省略任何知识点
 - 不要使用「详见教材」「此处省略」等跳过性表述
-- 即使课程材料对某些内容提及较少，也请基于你的专业知识补充完善，并标注「补充」"""
+- 即使课程材料对某些内容提及较少，也请基于你的专业知识补充完善，并标注「补充」
+- 不要以教师口吻进行自我介绍（如"同学们好，我是XX老师"），直接输出复习材料内容
+- 每个章节结束后直接进入下一章节，"
+        "不要在章节末尾添加祝福语、鼓励语或总结语"
+        "（如"祝考试顺利""希望这份资料有帮助"等）"""
 
     return f"""{task_desc}
 
@@ -353,10 +395,13 @@ def _run_generation(
                     {
                         "role": "user",
                         "content": (
-                            "你上一次的输出被截断了，请从截断处继续生成剩余内容。"
-                            "保持相同的 Markdown 结构和详细程度。"
-                            "不要重复已经写过的内容，直接从断点接着写。"
-                            "如果所有内容已经生成完毕，请回复「[生成完毕]」。"
+                            "你的输出因长度限制被截断，请从最后一个被截断的字/词/公式处继续。\n\n"
+                            "规则：\n"
+                            "1. 不要重复已经写过的任何内容，直接从断点接着写\n"
+                            "2. 保持和上文完全一致的 Markdown 层级结构\n"
+                            "3. 不要添加任何问候语、祝福语、总结语或开场白\n"
+                            "4. 如果上一个字或公式被截断，先补全它\n"
+                            "5. 所有要求的部分都生成完毕后，回复「[生成完毕]」"
                         ),
                     },
                 ]
@@ -393,16 +438,39 @@ def _run_generation(
         output_placeholder.markdown(_normalize_latex(full_output))
         progress_text.empty()
 
-        # 确定资料类型名称
-        primary_type = generate_types[0]
-        for kw in ["复习提纲", "详细笔记", "知识结构图", "自测题库"]:
-            if kw in primary_type:
-                primary_type = kw
-                break
+        # 清理 LLM 可能在末尾残留的祝福语/问候语
+        import re as _re
+
+        _closing_patterns = [
+            r"\n*祝[^\n]{0,30}考试[^\n]{0,20}(?:顺利|成功)[^\n]*[！!。.]?",
+            r"\n*希望[^\n]{0,30}(?:帮助|有用|顺利)[^\n]*[！!。.]?",
+            r"\n*好的，?我们继续[^\n]*\n*",
+        ]
+        for _pat in _closing_patterns:
+            full_output = _re.sub(_pat, "", full_output)
 
         checkpoint_path.unlink(missing_ok=True)
 
-        cm.save_review_material(current, primary_type, full_output)
+        # 按章节标题拆分为独立资料，每个类型单独保存
+        import time as _time
+
+        sections = _split_by_sections(full_output, generate_types)
+        saved_count = 0
+        for type_name, content in sections:
+            cm.save_review_material(current, type_name, content)
+            saved_count += 1
+            if len(sections) > 1:
+                _time.sleep(0.05)  # 确保时间戳不同，避免文件名冲突
+
+        if saved_count == 0:
+            # 回退：无法拆分时整篇保存
+            primary_type = generate_types[0]
+            for kw in ["复习提纲", "详细笔记", "知识结构图", "自测题库"]:
+                if kw in primary_type:
+                    primary_type = kw
+                    break
+            cm.save_review_material(current, primary_type, full_output)
+
         set_state("review_material", full_output)
         set_state("review_materials", [m.__dict__ for m in cm.list_review_materials(current)])
 
@@ -553,6 +621,18 @@ for txt_file in sorted(transcripts_dir.glob("*_transcript.txt")):
             text = txt_file.read_text(encoding="utf-8")
             if text.strip():
                 available_transcripts.append({"name": name, "text": text})
+                seen_names.add(name)
+        except Exception:
+            pass
+
+# 扫描 AI 修正后的转录文本
+for corrected_file in sorted(transcripts_dir.glob("*_corrected*.txt")):
+    name = corrected_file.stem
+    if name not in seen_names:
+        try:
+            text = corrected_file.read_text(encoding="utf-8")
+            if text.strip():
+                available_transcripts.append({"name": f"[AI修正] {name}", "text": text})
                 seen_names.add(name)
         except Exception:
             pass
@@ -817,17 +897,94 @@ with right_col:
         chat_history = get_state("chat_history", [])
 
         if chat_history:
-            for msg in chat_history:
+            for i, msg in enumerate(chat_history):
                 with st.chat_message(msg["role"]):
                     _render_markdown(msg["content"])
-                    if msg.get("sources"):
+
+                    is_last_assistant = msg["role"] == "assistant" and i == len(chat_history) - 1
+
+                    if msg.get("sources") and is_last_assistant:
+                        col_src, col_btn = st.columns([20, 1])
+                        with col_src:
+                            with st.expander(t("page2.sources")):
+                                for src in msg["sources"]:
+                                    sim_score = f"{src.get('score', 0):.2f}"
+                                    st.caption(
+                                        f"**{src.get('source_file', t('common.unknown'))}** | "
+                                        f"{t('page2.similarity', score=sim_score)}"
+                                    )
+                                    st.text(src.get("content", "")[:300])
+                        with col_btn:
+                            show_key = f"show_regen_{i}"
+                            if st.button("↻", key=f"regen_toggle_{i}"):
+                                set_state(show_key, not get_state(show_key, False))
+                                st.rerun()
+
+                        if get_state(show_key, False):
+                            col_r1, col_r2, col_r3, col_r4 = st.columns([1, 1, 1, 8])
+                            with col_r1:
+                                if st.button(t("page2.regen"), key=f"regen_{i}"):
+                                    set_state(show_key, False)
+                                    chat_history.pop()
+                                    set_state("chat_history", chat_history)
+                                    set_state("regenerate_style", "default")
+                                    st.rerun()
+                            with col_r2:
+                                if st.button(t("page2.regen_detail"), key=f"regen_d_{i}"):
+                                    set_state(show_key, False)
+                                    chat_history.pop()
+                                    set_state("chat_history", chat_history)
+                                    set_state("regenerate_style", "more_detail")
+                                    st.rerun()
+                            with col_r3:
+                                if st.button(t("page2.regen_casual"), key=f"regen_c_{i}"):
+                                    set_state(show_key, False)
+                                    chat_history.pop()
+                                    set_state("chat_history", chat_history)
+                                    set_state("regenerate_style", "more_casual")
+                                    st.rerun()
+
+                    elif msg.get("sources"):
                         with st.expander(t("page2.sources")):
                             for src in msg["sources"]:
+                                sim_score = f"{src.get('score', 0):.2f}"
                                 st.caption(
                                     f"**{src.get('source_file', t('common.unknown'))}** | "
-                                    f"{t('page2.similarity', score=f'{src.get("score", 0):.2f}')}"
+                                    f"{t('page2.similarity', score=sim_score)}"
                                 )
                                 st.text(src.get("content", "")[:300])
+
+                    elif is_last_assistant:
+                        col_empty, col_btn = st.columns([20, 1])
+                        with col_btn:
+                            show_key = f"show_regen_{i}"
+                            if st.button("↻", key=f"regen_toggle_{i}"):
+                                set_state(show_key, not get_state(show_key, False))
+                                st.rerun()
+
+                        if get_state(show_key, False):
+                            col_r1, col_r2, col_r3, col_r4 = st.columns([1, 1, 1, 8])
+                            with col_r1:
+                                if st.button(t("page2.regen"), key=f"regen_{i}"):
+                                    set_state(show_key, False)
+                                    chat_history.pop()
+                                    set_state("chat_history", chat_history)
+                                    set_state("regenerate_style", "default")
+                                    st.rerun()
+                            with col_r2:
+                                if st.button(t("page2.regen_detail"), key=f"regen_d_{i}"):
+                                    set_state(show_key, False)
+                                    chat_history.pop()
+                                    set_state("chat_history", chat_history)
+                                    set_state("regenerate_style", "more_detail")
+                                    st.rerun()
+                            with col_r3:
+                                if st.button(t("page2.regen_casual"), key=f"regen_c_{i}"):
+                                    set_state(show_key, False)
+                                    chat_history.pop()
+                                    set_state("chat_history", chat_history)
+                                    set_state("regenerate_style", "more_casual")
+                                    st.rerun()
         else:
             st.caption(t("page2.start_chat"))
 
@@ -849,6 +1006,8 @@ with right_col:
                 )
 
         # -- 输入区（固定底部） --
+        regenerate_style = get_state("regenerate_style", "")
+
         with st.container(key="workspace-input"):
             st.divider()
             user_query = st.chat_input(
@@ -857,10 +1016,29 @@ with right_col:
                 disabled=not vs_ready,
             )
 
-            # 处理发送
+            # 确定问题来源：新输入 or 重新生成
+            query = ""
+            style_instruction = ""
+
             if user_query and user_query.strip():
                 query = user_query.strip()
                 chat_history.append({"role": "user", "content": query})
+            elif regenerate_style and chat_history and chat_history[-1]["role"] == "user":
+                query = chat_history[-1]["content"]
+                if regenerate_style == "more_detail":
+                    style_instruction = (
+                        "\n\n## 本次回答要求：请提供更加详细、深入的解答，"
+                        "包含更多背景知识、推导过程和具体例子，力求内容全面深透。"
+                    )
+                elif regenerate_style == "more_casual":
+                    style_instruction = (
+                        "\n\n## 本次回答要求：请用更加口语化、通俗易懂的方式解答，"
+                        "就像和朋友聊天一样，多用比喻和生活化的例子，让复杂概念变得容易理解。"
+                    )
+                set_state("regenerate_style", "")
+
+            # 处理
+            if query:
                 set_state("qa_processing", True)
 
                 try:
@@ -903,10 +1081,29 @@ with right_col:
 
                     context = "\n\n---\n\n".join(context_parts)
 
+                    # 联网搜索补充
+                    from src.search.web_search import search_web
+
+                    web_results = search_web(query, max_results=3)
+                    if web_results:
+                        web_parts = []
+                        for wr in web_results:
+                            web_parts.append(
+                                f"[网络搜索 | {wr['title']} | {wr['href']}]\n{wr['body']}"
+                            )
+                        web_context = "\n\n---\n\n".join(web_parts)
+                        context = (
+                            context
+                            + "\n\n## 网络搜索结果（仅供参考，非课程材料）\n\n"
+                            + web_context
+                        )
+
                     from src.llm.factory import get_llm
 
                     llm = get_llm(config.llm)
                     system_prompt = llm.load_prompt("qa_system.txt", context=context)
+                    if style_instruction:
+                        system_prompt += style_instruction
 
                     messages = [{"role": "system", "content": system_prompt}]
                     for h in chat_history[-10:]:
