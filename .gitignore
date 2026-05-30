@@ -37,4 +37,16 @@ config.yaml
 # OS
 Thumbs.db
 .DS_Store
+
+# Claude / Project context
 CLAUDE.md
+
+# Design & task documents (internal, not part of the app)
+MIGRATE_REVIEW_PAGE.md
+REDESIGN.md
+REVIEW_UI_DESIGN.md
+
+# Temp files
+B
+C
+.nicegui/
