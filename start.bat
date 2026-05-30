@@ -18,6 +18,11 @@ echo/
 timeout /t 3 >nul
 
 :launch
+echo/
+echo   Cleaning bytecode cache...
+for /d /r "nicegui_app" %%d in (__pycache__) do @if exist "%%d" rmdir /s /q "%%d" 2>nul
+echo   Starting application...
+echo/
 call ".venv\Scripts\activate.bat"
-streamlit run run.py
+python nicegui_app/main.py
 pause

@@ -166,6 +166,7 @@
   "page2.start_chat": "Ask a question to start",
   "page2.clear_chat": "Clear Chat",
   "page2.export_chat": "Export Chat",
+  "page2.send": "Send",
   "page2.chat_placeholder": "Type your question and press Enter...",
   "page2.build_kb_first": "Please build the knowledge base first",
   "page2.thinking": "Thinking...",

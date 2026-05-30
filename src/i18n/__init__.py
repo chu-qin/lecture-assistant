@@ -3,10 +3,10 @@
 import json
 from pathlib import Path
 
-import streamlit as st
-
 _LOCALE_DIR = Path(__file__).resolve().parent
 _cache: dict[str, dict[str, str]] = {}
+
+_current_lang: str = "zh"
 
 
 def _load(lang: str) -> dict[str, str]:
@@ -35,13 +35,14 @@ def t(key: str, **kwargs: object) -> str:
 
 
 def set_language(lang: str) -> None:
-    """切换语言（写入 session_state）。"""
-    st.session_state["language"] = lang
+    """切换语言。"""
+    global _current_lang
+    _current_lang = lang
 
 
 def get_language() -> str:
     """获取当前语言，默认 zh。"""
-    return st.session_state.get("language", "zh")
+    return _current_lang
 
 
 def get_available_languages() -> dict[str, str]:

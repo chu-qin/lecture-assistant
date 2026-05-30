@@ -225,7 +225,7 @@ echo   To start:
 echo     1. double-click start.bat
 echo     2. or run in terminal:
 echo        .venv\Scripts\activate
-echo        streamlit run run.py
+echo        python nicegui_app/main.py
 echo/
 echo   To uninstall: delete this folder
 echo ==========================================

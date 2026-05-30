@@ -166,6 +166,7 @@
   "page2.start_chat": "输入问题开始对话",
   "page2.clear_chat": "清除对话",
   "page2.export_chat": "导出对话",
+  "page2.send": "发送",
   "page2.chat_placeholder": "输入问题后按回车发送...",
   "page2.build_kb_first": "请先构建知识库",
   "page2.thinking": "思考中...",

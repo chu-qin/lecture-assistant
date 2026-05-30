@@ -1,77 +1,74 @@
 # CLAUDE.md — Lecture Assistant
 
-课堂录音转文字 + 课件解析 + AI 复习资料生成 + 智能问答，一站式 Streamlit 应用。
+课堂录音转文字 + 课件解析 + AI 复习资料生成 + 智能问答，一站式 Web 应用。
 
 > 总代码量 ~3100 行 Python | 所有核心模块已完成 | 169 个单元测试
 
-## 当前进度（截至 2026-05-28）
+## 当前进度（截至 2026-05-29）
 
-**当前阶段**：P6 — 工程化收尾 + GitHub 发布准备，核心链路全部跑通。
+**当前阶段**：全部已知 Bug 已修复。Mermaid 11.x 兼容 + LaTeX/MathJax 3 渲染正常。169 测试通过。
 
 已完成里程碑：
-- P0: 安全/日志/依赖 5 个 bug 修复
-- P1: pyproject.toml、ruff/mypy/pytest 配置、course_manager + chroma_store 单元测试（测试 61→149）
-- P4: 多 LLM Provider、移动端响应式、i18n 多语言（中/英 155 keys）、EPUB 书本导入
-- P6: Git 初始化 + GitHub 发布、.env 配置、setup_env.bat/start.bat 中文化
-- UI 优化: 摘要持久化、sticky 布局、KaTeX 字符级扫描器、主题切换修复
+- P0-P6: 安全/日志/依赖修复、pyproject.toml/ruff/pytest 配置、多 LLM Provider、i18n、EPUB、GitHub 发布
+- **NiceGUI 迁移 (6 步全部完成)**：Streamlit → NiceGUI 前端框架迁移
+  - Step 0: `src/i18n/__init__.py` 解耦 Streamlit（模块级变量 + import bridge）
+  - Step 1-2: 骨架搭建 + 复习问答页面（async 流式 LLM、Mermaid、MathJax）
+  - Step 3-4: 资料录入页面 + 首页
+  - Step 5-6: 删除旧 Streamlit 代码（run.py, pages/, .streamlit/, src/ui/）+ 回归测试
+  - **BugFix (2026-05-28)**: `app.storage.tab` 需 WebSocket 连接 → 页面函数改为 `async def` + `await ui.context.client.connected()`
+  - **BugFix (2026-05-29)**: Streamlit 警告日志 → 移除 i18n 中的 Streamlit bridge 代码
+  - **BugFix (2026-05-29)**: 进入复习与问答页面自动弹出下载框 → `ui.download.content()` 是函数调用，返回 None，不能作为按钮元素 → 包在 `ui.button(on_click=...)` 中
+  - **BugFix (2026-05-29)**: 子页面侧边栏消失 → `render_sidebar()` 需在每个页面函数中调用（review_qa + material_input）
+  - **BugFix (2026-05-29)**: Mermaid "Syntax error in text" (v11.15.0) → Mermaid 11 移除了 `graph` 关键字 → `_normalize_mermaid()` 函数自动将 `graph TD/LR/TB` 替换为 `flowchart TD/LR/TB`
 - 测试: 169 passed、ruff 零错误
 
-### 后续优化方向
+## 已修复 Bug（2026-05-29）
 
-#### 高优先级
+### Mermaid 11.x 子图语法修复
 
-- [x] **CI/CD**：GitHub Actions 跑 ruff + mypy + pytest，PR 门禁（`.github/workflows/ci.yml`）
-- [x] **pre-commit hooks**：本地提交前自动 ruff format + check（`.pre-commit-config.yaml`）
-- **Streamlit 集成测试**：用 `streamlit.testing.AppTest` 覆盖页面核心流程（上传文件 → ASR → 生成资料 → 问答）
+**问题**：LLM 生成的 Mermaid 使用 `graph TD` + `subgraph "标题"` + 体内 `direction LR`，Mermaid 11.x 均不支持。
 
-#### 前端框架迁移（中远期，视需要决定）
+**修复**（`nicegui_app/pages/review_qa.py` `_normalize_mermaid()`）：
+1. `graph` → `flowchart`（已有）
+2. Unicode 花引号 `""` → `[""]`（新增 — LLM 常生成 `""` 而非 `""`）
+3. 体内 `direction LR` → 声明行内联 `subgraph LR ["title"]`（Mermaid 11 不支持体内 direction，必须写为 `subgraph direction ["title"]`）
 
-截至 2026-05，Streamlit 存在以下**无法通过 CSS hack 根治**的限制：
+Playwright 验证：Mermaid 渲染为有效 SVG（763x577 viewBox），零控制台错误。
 
-| 痛点 | 说明 |
-|------|------|
-| **Sticky 定位不可靠** | 左右栏独立滚动 + 标签页/输入框 sticky 完全依赖 CSS `:has()` 选择器和 `position: sticky`，Streamlit 升级可能改变 DOM 结构导致失效 |
-| **KaTeX 报错无容错** | `st.markdown()` 内部启用 KaTeX strict 模式，无法配置关闭。LLM 输出格式稍有偏差（未闭合 `$`、中文紧贴公式等）即大面积报错。当前通过字符级扫描器 `_scan_math_delimiters()` 转义孤立 `$` 来缓解，但仍有极端 case 可能漏过 |
-| **无离线/PWA 能力** | Streamlit 是纯服务端渲染，断网不可用，无法打包为桌面应用 |
-| **组件黑盒** | 无法直接控制 DOM/CSS，自定义 UI 行为全靠 `data-testid` 属性选择器 hack，升级风险高 |
-| **会话状态不持久** | 刷新页面后 session_state 丢失（除课程数据已持久化到磁盘），用户需重新操作 |
+### MathJax 3 LaTeX 不渲染修复
 
-##### 候选替代框架
+**问题**：`inject_theme()` 在页面函数内调用（`@ui.page` 装饰的函数中），`add_head_html`/`add_body_html` 此时 HTML 已发送到浏览器，脚本通过 WebSocket 动态注入。浏览器不执行通过 `innerHTML` 添加的 `<script>` 标签（安全策略），导致 MathJax 配置和 CDN 脚本从未执行。
 
-| 框架 | 技术栈 | 优势 | 风险 |
-|------|--------|------|------|
-| **NiceGUI** | Python + Vue/Quasar (服务端渲染) | UI 控件丰富（sticky 原生支持），数学公式可用 `ui.markdown()` 或 `ui.math()`，学习曲线平缓，可打包为桌面应用 | 生态较小（14k stars），社区资源少，复杂布局不如 Streamlit 直观 |
-| **Gradio** | Python + Svelte (服务端渲染) | ML 场景成熟（HuggingFace 官方），组件丰富，支持 `gr.Markdown()` 含 LaTeX，天然支持 streaming | 定制化能力弱，多页面/复杂布局不友好，侧边栏导航需自己实现 |
-| **Reflex** (原 Pynecone) | Python → React (编译为 Next.js) | 完全控制前端（React 组件级），数学可用 KaTeX/MathJax 自定义配置，sticky/滚动等原生 DOM 能力，可导出静态站点/PWA | 学习曲线陡（需理解 React 概念），生态最小（15k stars），API 仍在快速变化 |
-| **Dash** (Plotly) | Python + React (服务端渲染) | 企业级成熟度，Plotly 图表原生支持，回调系统清晰，Layout 完全可控 | 重度依赖回调模式（代码量大于声明式），UI 外观偏企业/过时，移动端适配需额外工作 |
+**修复**（`nicegui_app/main.py` + `nicegui_app/components/theme.py`）：
+1. `inject_theme()` 在模块顶层（`ui.run()` 之前）调用，确保脚本包含在初始 HTML 响应中
+2. `add_body_html()` 使用 `shared=True` 参数（NiceGUI 要求在页面上下文之外调用时必须传此参数）
+3. MathJax CDN 改为动态加载（`document.createElement('script')`），避免 `async` 属性导致的竞态
+4. `typesetAll()` 中添加 `MathJax.typesetClear([el])` 清除内部状态后再渲染
 
-##### 迁移策略建议
+Playwright 验证：186 个 `mjx-container` 渲染元素，`window.MathJax.typesetPromise` 可用，零控制台错误。
 
-如果决定迁移，推荐分三步走：
+### 当前目录结构
 
-1. **抽离 UI 层接口**（0 风险，可在 Streamlit 内完成）
-   - 定义抽象 UI 层（`BaseUI`），将页面逻辑与框架解耦
-   - 当前 `pages/*.py` 中直接调用 `st.xxx()` 的地方，封装为 `ui.markdown()` / `ui.button()` / `ui.chat_message()` 等
-   - 这一步不改变任何功能，只是代码重构
+```
+nicegui_app/            # NiceGUI 前端（唯一前端）
+├── main.py             # 入口，ui.run() + 首页路由
+├── state.py            # app.storage 状态管理（user 持久化 + tab 内存）
+├── components/
+│   ├── sidebar.py      # left_drawer 侧边栏（课程列表 + 导航 + 语言切换）
+│   └── theme.py        # MathJax 3 LaTeX + 自定义 CSS
+└── pages/
+    ├── review_qa.py    # 复习与问答（异步流式 LLM + Mermaid + 聊天）
+    └── material_input.py  # 资料录入（ASR + 课件解析 + EPUB 导入）
 
-2. **选型 PoC**（选 1 个框架做最小可行原型）
-   - 只迁移**一个页面**（建议"复习与问答"，因为它是 sticky + 公式问题的重灾区）
-   - 验证：sticky 效果、公式渲染容错、移动端表现、Chat 组件可用性
-   - 评估标准：DOM 控制力 > 公式渲染容错 > 迁移成本 > 生态成熟度
-   - 当前倾向：**NiceGUI**（平衡控制力和低成本）或 **Reflex**（最大控制力但成本高）
-
-3. **完整迁移**（PoC 通过后）
-   - 按页面逐一迁移，每迁移一个页面就回归测试
-   - 保留 Streamlit 分支作为回退方案
-   - 目标：sticky/公式问题彻底消失，可打包为桌面应用（Electron/PyInstaller）
-
-##### 暂不推荐
-
-- **完全自研前端（React/Vue + FastAPI）**：灵活性最大但成本极高，需同时维护前后端两套代码，对个人项目不划算
-- **Next.js / SvelteKit 等全栈框架**：强迫用 JS/TS 重写全部后端逻辑，工作量大且打破 Python 全栈的统一性
+src/                    # 业务逻辑（零改动）
+tests/                  # 169 个单元测试
+prompts/                # LLM 提示词模板（zh/ + en/）
+tools/                  # ffmpeg 绿色版、LibreOffice 便携版
+data/courses/           # 用户数据，按课程分子目录
+```
 
 ## 技术栈
-- Python 3.10+, Windows 10+, Streamlit 1.28+
+- Python 3.12+, Windows 10+, **NiceGUI 3.12.1** (Vue/Quasar)
 - FunASR SenseVoiceSmall (ASR) | DeepSeek API (LLM, OpenAI 兼容)
 - ChromaDB + BAAI/bge-small-zh-v1.5 (RAG 语义检索, 512 维, cosine 距离)
 - python-pptx + olefile + magic-pdf (文档解析)
@@ -84,15 +81,35 @@ src/parser/      # 文档解析：ppt_extractor (PPT/PPTX) + mineru_parser (PDF)
 src/llm/         # LLM 调用：deepseek_llm (OpenAI 兼容接口)
 src/knowledge/   # RAG：chunker (语义分块) + embedder (BGE) + chroma_store
 src/merger/      # 课件+录音内容合并
-src/ui/          # Streamlit 公共组件：sidebar + session_state
 src/i18n/        # 多语言：zh.json + en.json + t() 函数
-pages/           # Streamlit 2 个子页面 (1-2)
+nicegui_app/     # NiceGUI 前端（main.py, state.py, pages/, components/）
 prompts/         # LLM 提示词模板，按语言分子目录 (zh/ + en/)
 tools/           # ffmpeg 绿色版、LibreOffice 便携版
 data/courses/    # 用户数据，按课程分子目录
 ```
 
 ## 编码约定（必须遵守）
+
+### NiceGUI 页面 — 关键模板
+```python
+@ui.page("/path/{param}")
+async def page_func(param: str):                # 必须是 async def
+    """页面说明。"""
+    await ui.context.client.connected()          # 必须在最前面！否则 app.storage.tab 报 RuntimeError
+    inject_theme()
+    render_sidebar()
+    # ... 页面逻辑
+```
+
+- 每个页面用 `@ui.page('/path/{param}')` 装饰器注册路由
+- **页面函数必须是 `async def`，第一行必须 `await ui.context.client.connected()`**
+  - 原因：`app.storage.tab` 需要浏览器 WebSocket 连接就绪，`client.connected()` 阻塞等待握手完成
+  - 这是 NiceGUI 3.12.1 的正确 API，**不是** `ui.client_connected()`（该 API 不存在）
+- 页面函数开头调用 `inject_theme()` + `render_sidebar()`
+- 用 `get_cache(key)` / `set_cache(key, value)` 读写内存状态（tab 级，重对象）
+- 用 `get_user(key)` / `set_user(key, value)` 读写持久化状态（user 级，轻量键，跨页面/重启存活）
+- 阻塞调用（LLM, ASR）用 `await asyncio.to_thread(fn, *args)` 包装，避免冻结事件循环
+- 流式 LLM 输出通过 `_stream_llm_to_element()` 辅助函数实现（asyncio.Queue + ThreadPoolExecutor）
 
 ### 架构模式
 - **每个模块必有 `base.py`**：定义抽象基类 + dataclass 数据契约 + 模块专属异常类
@@ -104,20 +121,6 @@ data/courses/    # 用户数据，按课程分子目录
 - `AppConfig` 是顶层容器，包含 `ASRConfig`, `LLMConfig` 等子配置
 - 用 `get_config()` 获取全局单例，不要重复读取 YAML
 - 支持 `${ENV_VAR:default}` 环境变量引用语法
-
-### Streamlit 页面
-- 每个 `pages/*.py` 开头必须有：
-  ```python
-  import sys
-  from pathlib import Path
-  _project_root = Path(__file__).resolve().parent.parent
-  if str(_project_root) not in sys.path:
-      sys.path.insert(0, str(_project_root))
-  ```
-- 每页调用 `init_session_state()` + `render_sidebar()` 开始
-- 用 `get_state(key, default)` / `set_state(key, value)` 读写 session state，不要直接用 `st.session_state`
-- 前置条件检查后 `st.stop()`，不要用 if/else 嵌套
-- **Streamlit 嵌套按钮陷阱**：`st.popover` 内嵌套 `if button:` 不可靠，改用 session state 标记 + inline 确认/取消双按钮
 
 ### 通用约定
 - 文件路径用 `pathlib.Path`，不要用 `os.path` 或字符串拼接
@@ -158,10 +161,10 @@ data/courses/    # 用户数据，按课程分子目录
 - `${OPENAI_API_KEY:}` — 可选，未设置时用空字符串（`:}` = 空默认值）
 - **规则**：只有当前 provider 对应的 key 必填（如 deepseek → `DEEPSEEK_API_KEY`），其他 provider 的 key 用 `${VAR:}` 可选语法，避免未配置时启动崩溃
 
-### 多轮续写策略（页面 2: 复习与问答）
+### 多轮续写策略（复习与问答页）
 - 第 1 轮正常生成 → 如果输出 ≥ 1500 字符且不含 "[生成完毕]"，发起续写 → 最多 3 轮
 - 启发式终止：输出 < 1500 字符或含 "[生成完毕]" 时停止
-- **Streamlit 节流渲染**：每 8 个 token chunk 才更新一次 `output_placeholder.markdown()`，避免第 2+ 轮时 `full_output` 已累积数千字后每个 chunk 都重渲染整块 markdown 导致界面卡死。每轮流式结束后有最后一次补渲染确保所有内容上屏
+- NiceGUI 版：每 chunk 立即更新 `ui.markdown.set_content()`，不再需要节流渲染
 
 ### 知识库按课程隔离
 - 每课程独立 ChromaDB collection：`c_{md5(course_name)[:12]}`
@@ -183,16 +186,23 @@ data/courses/    # 用户数据，按课程分子目录
 | PDF 解析 | `get_parser(config.parser).parse(path, out_dir)` | `src/parser/mineru_parser.py` |
 | EPUB 书本导入 | `get_epub_parser().parse(path, out_dir)` | `src/parser/epub_parser.py` |
 | LLM 调用 | `DeepSeekLLM(config.llm).chat(messages)` | `src/llm/deepseek_llm.py` |
+| LLM 流式 | `DeepSeekLLM(config.llm).stream_chat(messages)` | `src/llm/deepseek_llm.py` |
 | 文本嵌入 | `get_embedder(config.embedding).embed(texts)` | `src/knowledge/embedder.py` |
 | 向量存储 | `ChromaVectorStore(config.chromadb)` | `src/knowledge/chroma_store.py` |
 | 语义分块 | `MarkdownChunker(chunk_size, overlap).chunk_text(text, meta)` | `src/knowledge/chunker.py` |
 | 课件+录音合并 | `ContentMerger.merge(...)` | `src/merger/content_merger.py` |
 | 多课程管理 | `CourseManager(data_dir)` | `src/course_manager.py` |
 | 复习资料 CRUD | `cm.save/list/load/delete_review_material(...)` | `src/course_manager.py` |
-| 侧边栏 | `render_sidebar()` | `src/ui/sidebar.py` |
-| Session State | `get_state(k, d)` / `set_state(k, v)` | `src/ui/session_state.py` |
-| CSS 主题 | `inject_theme_css()` | `src/ui/theme.py` |
 | 多语言 | `t("key", **kwargs)` / `set_language("en")` | `src/i18n/__init__.py` |
+
+NiceGUI 组件：
+| 能力 | 调用方式 | 所在文件 |
+|------|---------|---------|
+| 侧边栏 | `render_sidebar()` | `nicegui_app/components/sidebar.py` |
+| 主题注入 | `inject_theme()` | `nicegui_app/components/theme.py` |
+| Tab 缓存（重对象） | `get_cache(key)` / `set_cache(key, val)` | `nicegui_app/state.py` |
+| User 持久化（轻量键） | `get_user(key)` / `set_user(key, val)` | `nicegui_app/state.py` |
+| 流式 LLM 到元素 | `_stream_llm_to_element(llm, messages, el)` | `nicegui_app/pages/review_qa.py` |
 
 ## 已知限制
 - **ChromaDB 只有 add + delete_all**，没有 update/delete_by_id
@@ -203,28 +213,65 @@ data/courses/    # 用户数据，按课程分子目录
 ## 常用命令
 ```bash
 # 启动
-.venv\Scripts\activate && streamlit run run.py
+.venv\Scripts\activate && python nicegui_app/main.py
+# 或双击 start.bat
 
 # 测试
 pytest tests/ -v
 
-# 单独跑一个页面（调试用）
-streamlit run pages/1_资料录入.py
+# 代码检查
+ruff check
 
-# 清理字节码缓存（修改 src/ 后报 AttributeError 时执行）
+# 清理字节码缓存（修改代码后报 AttributeError 时执行）
 find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null
 ```
 
 ## 已知陷阱
 
-### 修改 src/ 模块后报 AttributeError
-Streamlit 会缓存已导入模块的 `.pyc` 字节码。修改 `src/` 下的模块（如 `course_manager.py`）后，必须清理 `__pycache__` 目录，否则可能加载旧版本导致 `object has no attribute` 错误。**每次修改 src/ 下的类定义或新增方法后，先执行上面的清理字节码命令再启动 Streamlit。**
+### NiceGUI 3.12.1: `app.storage.tab` 需要客户端连接
 
-### Streamlit 页面中辅助函数的定义顺序
-Streamlit 页面脚本是**从头到尾顺序执行**的。所有在页面主体代码中调用的辅助函数必须**先定义后使用**——即函数 `def` 必须写在 `if st.button(...):` 等调用代码之前。Python 对 `def` 内部的延迟调用没有顺序要求，但对模块顶层直接执行的调用有要求。**所有 helper 函数放在 `init_session_state()` / `render_sidebar()` 之前。**
+**症状**：`RuntimeError: app.storage.tab can only be used with a client connection`
 
-### Streamlit Widget 会话状态限制
-新版 Streamlit 禁止在 widget 实例化后修改其绑定的 `st.session_state` key。聊天输入用 `st.chat_input`（自动清空），不要用 `st.text_input` + 手动重置 session_state。`st.switch_page` 路径相对于入口脚本目录，子页面中需动态检测前缀（见 `sidebar.py` 的 `_PAGE_PREFIX`）。
+**根因**：`app.storage.tab` 内部检查 `client.has_socket_connection`，该属性在浏览器 SocketIO 握手完成后才为 `True`。
+
+**修复**：页面函数必须是 `async def`，第一行调用 `await ui.context.client.connected()`：
+```python
+@ui.page("/")
+async def home():
+    await ui.context.client.connected()  # 等待 WebSocket 握手完成
+    # 现在可以安全使用 get_cache() / app.storage.tab
+```
+
+**不是** `await ui.client_connected()` — NiceGUI 3.x 中不存在该 API。
+
+### NiceGUI 3.12.1: `ui.download.content()` 是函数调用，不是按钮
+
+**症状**：进入页面后浏览器自动弹出下载框，无需任何点击。
+
+**根因**：`ui.download.content()` 是**命令式函数**（`nicegui/functions/download.py`），调用时立即触发浏览器下载，返回值是 `None`（不是 UI 元素）。
+
+**错误用法**：
+```python
+# 页面渲染时立即触发下载！不是按钮！
+ui.download.content(content_bytes, filename="file.md")
+```
+
+**正确用法**：包在 `ui.button(on_click=...)` 回调中：
+```python
+def do_download():
+    ui.download.content(content_bytes, filename="file.md")
+
+ui.button("下载", on_click=do_download)
+```
+
+### NiceGUI 事件回调中的阻塞调用
+NiceGUI 事件循环是单线程的，所有 UI 回调必须是非阻塞的。同步阻塞调用（LLM、ASR）必须用 `await asyncio.to_thread(fn, *args)` 包装，否则整个 UI 冻结。
+
+### NiceGUI 流式渲染
+流式 LLM 响应用 `_stream_llm_to_element()` 实现：sync generator → ThreadPoolExecutor → `loop.call_soon_threadsafe(queue.put_nowait, chunk)` → 主事件循环逐 chunk 更新 `ui.markdown.set_content()`。
+
+### 修改代码后报 AttributeError
+修改 `src/` 下模块后，Python 可能加载旧的 `.pyc` 字节码。执行上面的"清理字节码缓存"命令后重启应用。`start.bat` 已包含自动清理逻辑。
 
 ### Windows Batch 文件三大陷阱
 
@@ -242,7 +289,31 @@ Streamlit 页面脚本是**从头到尾顺序执行**的。所有在页面主体
 - `echo.` 在某些 Windows 版本会被解析为"查找名为 echo 的文件"，导致意外行为
 - 统一用 `echo/` 输出空行，安全可靠
 
-### Streamlit 自动打开浏览器
-- `streamlit run` 默认会自动打开浏览器到 `http://localhost:8501`
-- **不要**在启动脚本里额外加 `start "" http://localhost:8501`，会导致双窗口
-- 如需禁用自动打开：在 `.streamlit/config.toml` 设 `[server] headless = true`
+### NiceGUI reload 模式下的多进程
+`ui.run(reload=True)` 会启动 watchdog 监控文件变化。如果手动 `taskkill` 杀进程不干净，可能留多个进程竞争同一端口。右键点 `start.bat` → "以管理员身份运行" 或重新双击启动前，确保没有残留 Python 进程（任务管理器检查）。
+
+### Mermaid 11.x 语法变更
+NiceGUI 3.12.1 内置 Mermaid 11.15.0，该版本：
+- 移除了 `graph` 关键字，只接受 `flowchart`
+- **不支持 subgraph 体内的 `direction` 关键字**（会导致 "Parse error"），必须写为声明行内联：`subgraph LR ["title"]`
+- subgraph 标题必须用方括号：`["title"]`
+
+LLM 常生成旧语法：`graph TD` + `subgraph "标题"` + 体内 `direction LR` + Unicode 花引号 `""`。
+
+**修复**：`_normalize_mermaid()` 函数自动处理全部 3 种情况。`_normalize_content()` 包含 LaTeX + Mermaid 两个规范化。
+
+### `add_head_html`/`add_body_html` 在页面函数之外调用需 `shared=True`
+
+NiceGUI 要求：在 `@ui.page` 函数之外调用 `add_head_html`/`add_body_html`/`add_css` 时，必须传 `shared=True`，否则 `ui.run()` 抛出 RuntimeError。
+
+```python
+# 顶层调用（import 时）
+ui.add_body_html("<script>...</script>", shared=True)
+
+# 页面函数内调用（无需 shared）
+@ui.page("/")
+async def home():
+    ui.add_body_html("<script>...</script>")
+```
+
+为防止脚本被 innerHTML 注入后不执行（浏览器安全策略），应在 `ui.run()` 之前调用，确保脚本包含在初始 HTML 响应中。
