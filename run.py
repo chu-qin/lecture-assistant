@@ -2,6 +2,7 @@
 
 import logging
 import sys
+import threading
 from pathlib import Path
 
 logging.basicConfig(
@@ -114,3 +115,16 @@ with st.expander(t("app.about"), icon=":material/info:"):
     | {t("app.about.data_dir")} | {config.project.data_dir}/courses/ |
     | {t("app.about.model_cache")} | {t("app.about.portable")} |
     """)
+
+
+# ---- FastAPI 后台服务（复习与问答新前端） ----
+def _start_api():
+    import uvicorn
+
+    from src.api.review_api import app as fastapi_app
+
+    uvicorn.run(fastapi_app, host="0.0.0.0", port=8502, log_level="error")
+
+
+_api_thread = threading.Thread(target=_start_api, daemon=True)
+_api_thread.start()

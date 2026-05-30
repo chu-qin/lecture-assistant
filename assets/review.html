@@ -1,0 +1,1384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>复习与问答 — Lecture Assistant</title>
+
+<!-- Theme flash prevention: apply theme before first paint -->
+<script>
+(function() {
+  var saved = localStorage.getItem('la-theme') || 'dark';
+  var resolved = saved === 'system'
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : saved;
+  document.documentElement.setAttribute('data-theme', resolved);
+})();
+</script>
+
+<!-- KaTeX -->
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.css">
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/katex.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/katex@0.16.11/dist/contrib/auto-render.min.js"></script>
+
+<!-- Marked -->
+<script src="https://cdn.jsdelivr.net/npm/marked@15.0.3/marked.min.js"></script>
+
+<!-- Mermaid -->
+<script src="https://cdn.jsdelivr.net/npm/mermaid@11/dist/mermaid.min.js"></script>
+
+<style>
+/* ============================================================
+   Color System
+   ============================================================ */
+:root {
+  --bg-app:        #0d0d0f;
+  --bg-panel:      #111114;
+  --bg-surface:    #18181c;
+  --bg-hover:      #1f1f24;
+  --bg-active:     #25252c;
+
+  --text-primary:  #ededef;
+  --text-secondary:#8b8b9a;
+  --text-muted:    #4a4a58;
+
+  --accent:        #7c6af7;
+  --accent-hover:  #9585f9;
+  --accent-dim:    rgba(124, 106, 247, 0.15);
+
+  --border:        rgba(255,255,255,0.07);
+  --border-strong: rgba(255,255,255,0.13);
+
+  --success:       #3dd68c;
+  --success-dim:   rgba(61, 214, 140, 0.12);
+  --warning:       #f5a623;
+}
+
+[data-theme="light"] {
+  --bg-app:        #f5f5f7;
+  --bg-panel:      #ffffff;
+  --bg-surface:    #ffffff;
+  --bg-hover:      #f0f0f3;
+  --bg-active:     #e8e8ed;
+
+  --text-primary:  #1a1a1f;
+  --text-secondary:#6b6b7a;
+  --text-muted:    #b0b0bc;
+
+  --accent:        #5b4de0;
+  --accent-hover:  #4a3ec8;
+  --accent-dim:    rgba(91, 77, 224, 0.1);
+
+  --border:        rgba(0,0,0,0.08);
+  --border-strong: rgba(0,0,0,0.15);
+
+  --success:       #1a9e5c;
+  --success-dim:   rgba(26, 158, 92, 0.1);
+  --warning:       #c47d0a;
+}
+
+/* ============================================================
+   Reset & Base
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  font-family: -apple-system, 'Inter', 'PingFang SC', 'Noto Sans SC', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background: var(--bg-app);
+  -webkit-font-smoothing: antialiased;
+}
+
+/* ============================================================
+   Top Navigation
+   ============================================================ */
+.top-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 4px;
+  z-index: 200;
+}
+
+.nav-course {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  padding: 4px 8px;
+  margin-right: 8px;
+  white-space: nowrap;
+}
+
+.nav-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border-strong);
+  margin: 0 8px;
+}
+
+.nav-course-select {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin-right: 4px;
+  max-width: 200px;
+  cursor: pointer;
+  outline: none;
+}
+
+.nav-course-select option {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.nav-tabs {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+  overflow-x: auto;
+}
+
+.nav-tab {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 450;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: color 0.12s, background 0.12s;
+}
+
+.nav-tab:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.nav-tab.active {
+  color: var(--text-primary);
+  background: var(--bg-active);
+  font-weight: 500;
+}
+
+.nav-tab:disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.nav-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.nav-btn {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+
+.nav-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--border);
+  background: var(--bg-hover);
+}
+
+.nav-btn.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+
+.nav-btn.primary:hover {
+  background: var(--accent-hover);
+}
+
+/* ============================================================
+   Main Layout
+   ============================================================ */
+.main-layout {
+  display: flex;
+  height: 100vh;
+  padding-top: 48px;
+}
+
+/* ---- Content Area ---- */
+.content-area {
+  flex: 1;
+  overflow-y: auto;
+  min-width: 0;
+}
+
+.content-body {
+  padding: 40px 48px 80px;
+}
+
+.content-body h1 {
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  margin: 0 0 20px;
+}
+
+.content-body h2 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 32px 0 12px;
+}
+
+.content-body h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 24px 0 8px;
+}
+
+.content-body p {
+  margin: 0 0 14px;
+  line-height: 1.75;
+}
+
+.content-body li {
+  line-height: 1.75;
+  margin-bottom: 4px;
+}
+
+.content-body code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 12.5px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.content-body pre {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  margin: 12px 0 20px;
+}
+
+.content-body pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.content-body blockquote {
+  border-left: 3px solid var(--accent);
+  margin: 0.8em 0;
+  padding: 0.4em 1em;
+  background: var(--accent-dim);
+  border-radius: 0 6px 6px 0;
+}
+
+.content-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.8em 0;
+  font-size: 14px;
+}
+
+.content-body th, .content-body td {
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  text-align: left;
+}
+
+.content-body th {
+  background: var(--bg-hover);
+  font-weight: 600;
+}
+
+.content-body strong { font-weight: 600; }
+
+.content-body hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.2em 0;
+}
+
+.content-body img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+
+.content-body ul, .content-body ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+/* Tab panels */
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* Empty / placeholder */
+.empty-state {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 60px 20px;
+  font-size: 14px;
+}
+
+/* Generate prompt (centered CTA when no material exists) */
+.generate-prompt {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 320px;
+  gap: 16px;
+  color: var(--text-muted);
+}
+
+.generate-prompt p {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.btn-generate {
+  height: 36px;
+  padding: 0 20px;
+  background: var(--accent);
+  color: #fff;
+  border: none;
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background 0.12s, transform 0.08s;
+}
+
+.btn-generate:hover  { background: var(--accent-hover); }
+.btn-generate:active { transform: scale(0.98); }
+
+/* Streaming cursor */
+.streaming-cursor::after {
+  content: '|';
+  animation: blink 0.9s infinite;
+  color: var(--accent);
+  font-weight: 300;
+}
+
+@keyframes blink {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0; }
+}
+
+/* ---- KB Badge ---- */
+.kb-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 2px 8px;
+  border-radius: 20px;
+  font-size: 11px;
+  font-weight: 500;
+}
+
+.kb-badge.ready {
+  background: var(--success-dim);
+  color: var(--success);
+  border: 1px solid rgba(61, 214, 140, 0.2);
+}
+
+.kb-badge.ready::before {
+  content: '';
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: var(--success);
+}
+
+.kb-badge.off {
+  background: var(--bg-hover);
+  color: var(--text-muted);
+}
+
+/* ---- Status dot ---- */
+.status-dot {
+  display: inline-block;
+  width: 8px; height: 8px;
+  border-radius: 50%;
+  margin-right: 4px;
+}
+.status-dot.ready  { background: var(--success); }
+.status-dot.building { background: var(--warning); animation: pulse 1.5s infinite; }
+.status-dot.off     { background: var(--text-muted); }
+
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.4; }
+}
+
+/* ---- Chat Panel ---- */
+.chat-panel {
+  width: 380px;
+  flex-shrink: 0;
+  display: flex;
+  flex-direction: column;
+  border-left: 1px solid var(--border);
+  background: var(--bg-panel);
+}
+
+.chat-header {
+  height: 48px;
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  border-bottom: 1px solid var(--border);
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.chat-messages {
+  flex: 1;
+  overflow-y: auto;
+  padding: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.chat-status {
+  font-size: 11px;
+  color: var(--text-muted);
+  padding: 4px 16px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.msg {
+  max-width: 88%;
+  font-size: 13px;
+  line-height: 1.7;
+  padding: 10px 14px;
+  border-radius: 12px;
+  word-break: break-word;
+}
+
+.msg-user {
+  align-self: flex-end;
+  background: var(--accent);
+  color: #fff;
+  border-radius: 12px 12px 3px 12px;
+}
+
+.msg-ai {
+  align-self: flex-start;
+  background: var(--bg-surface);
+  color: var(--text-primary);
+  border: 1px solid var(--border);
+  border-radius: 3px 12px 12px 12px;
+}
+
+.msg-ai .katex { color: var(--text-primary); }
+
+.msg-ai p { margin: 0.3em 0; font-size: 13px; }
+.msg-ai li { font-size: 13px; }
+.msg-ai code { font-size: 0.9em; }
+.msg-ai pre { font-size: 12px; padding: 8px 12px; margin: 0.4em 0; background: var(--bg-hover); border: 1px solid var(--border); border-radius: 6px; }
+.msg-ai pre code { font-size: 12px; }
+
+.chat-sources {
+  margin-top: 6px;
+  padding-top: 6px;
+  border-top: 1px solid var(--border);
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.chat-sources summary { cursor: pointer; font-weight: 500; }
+
+.chat-sources .src-item {
+  margin: 4px 0;
+  padding: 4px 8px;
+  background: var(--bg-hover);
+  border-radius: 4px;
+  border-left: 2px solid var(--accent);
+  font-size: 11px;
+}
+
+.chat-input-area {
+  flex-shrink: 0;
+  padding: 12px 16px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  gap: 8px;
+  align-items: flex-end;
+}
+
+.chat-textarea {
+  flex: 1;
+  min-height: 36px;
+  max-height: 120px;
+  padding: 8px 12px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 13px;
+  font-family: inherit;
+  resize: none;
+  outline: none;
+  transition: border-color 0.12s;
+  line-height: 1.5;
+}
+
+.chat-textarea::placeholder { color: var(--text-muted); }
+
+.chat-textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.btn-send {
+  width: 36px;
+  height: 36px;
+  flex-shrink: 0;
+  background: var(--accent);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.12s, transform 0.08s;
+  color: #fff;
+}
+
+.btn-send:hover  { background: var(--accent-hover); }
+.btn-send:active { transform: scale(0.95); }
+.btn-send:disabled { background: var(--bg-active); color: var(--text-muted); cursor: not-allowed; }
+
+.btn-send svg { width: 16px; height: 16px; }
+
+/* ============================================================
+   Scrollbar
+   ============================================================ */
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ============================================================
+   Generate Modal
+   ============================================================ */
+.modal-overlay {
+  display: none;
+  position: fixed;
+  inset: 0;
+  background: rgba(0,0,0,0.5);
+  z-index: 300;
+  align-items: center;
+  justify-content: center;
+}
+.modal-overlay.open { display: flex; }
+
+.modal {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 24px;
+  width: 480px;
+  max-width: 90vw;
+  max-height: 80vh;
+  overflow-y: auto;
+}
+
+.modal h3 { font-size: 16px; margin-bottom: 16px; color: var(--text-primary); }
+
+.modal label {
+  display: block;
+  font-size: 13px;
+  font-weight: 500;
+  margin: 12px 0 4px;
+  color: var(--text-primary);
+}
+
+.modal .check-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin: 4px 0 12px;
+}
+
+.modal .check-group label {
+  font-weight: 400;
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.modal textarea {
+  width: 100%;
+  font-family: inherit;
+  font-size: 13px;
+  padding: 8px 12px;
+  background: var(--bg-app);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  color: var(--text-primary);
+  resize: vertical;
+  min-height: 60px;
+  outline: none;
+}
+
+.modal textarea:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.modal-buttons {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+  margin-top: 16px;
+}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media (max-width: 768px) {
+  .main-layout { flex-direction: column; }
+  .content-area { flex: none; height: 50vh; }
+  .content-body { padding: 20px 16px 40px; }
+  .chat-panel { width: 100%; flex: 1; border-left: none; border-top: 1px solid var(--border); }
+  .top-nav { flex-wrap: wrap; height: auto; padding: 6px 12px; gap: 4px; min-height: 48px; }
+  .nav-course-select { max-width: 150px; font-size: 12px; }
+  .nav-tab { font-size: 12px; padding: 0 10px; }
+  .main-layout { padding-top: 56px; }
+}
+
+@media (max-width: 480px) {
+  .content-body { padding: 12px; }
+  .chat-panel { width: 100%; }
+  .modal { width: 95vw; padding: 16px; }
+  .nav-btn { font-size: 11px; padding: 0 8px; }
+}
+</style>
+</head>
+<body>
+
+<!-- ============================================================
+     Top Navigation
+     ============================================================ -->
+<nav class="top-nav">
+  <select id="courseSelect" class="nav-course-select" onchange="onCourseChange()">
+    <option value="">选择课程...</option>
+  </select>
+  <span class="nav-divider"></span>
+  <div class="nav-tabs" id="navTabs"></div>
+  <div class="nav-actions">
+    <button class="nav-btn" id="themeToggle" onclick="toggleTheme()" title="切换主题">主题</button>
+    <button class="nav-btn" onclick="exportChat()" title="导出对话">导出</button>
+    <button class="nav-btn primary" onclick="openGenerateModal()">生成</button>
+  </div>
+</nav>
+
+<!-- ============================================================
+     Main Layout
+     ============================================================ -->
+<main class="main-layout">
+
+  <!-- Content Area -->
+  <section class="content-area" id="contentArea">
+    <div class="content-body" id="contentBody">
+      <div class="empty-state" id="contentEmpty">
+        <p>选择一个课程和资料类型开始</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Chat Panel -->
+  <aside class="chat-panel">
+    <div class="chat-header" id="chatHeader">
+      <span class="kb-badge off">知识库未构建</span>
+    </div>
+    <div class="chat-messages" id="chatMessages">
+      <div class="empty-state" style="padding:30px 10px;">
+        <p>在此输入问题，AI 基于课件和录音回答</p>
+      </div>
+    </div>
+    <div class="chat-status" id="chatStatus"></div>
+    <div class="chat-input-area">
+      <textarea class="chat-textarea" id="chatInput" placeholder="输入问题..." rows="1"></textarea>
+      <button class="btn-send" id="sendBtn" onclick="sendMessage()" title="发送">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+          <line x1="12" y1="19" x2="12" y2="5"></line>
+          <polyline points="5 12 12 5 19 12"></polyline>
+        </svg>
+      </button>
+    </div>
+  </aside>
+
+</main>
+
+<!-- ============================================================
+     Generate Modal
+     ============================================================ -->
+<div class="modal-overlay" id="genModal">
+  <div class="modal">
+    <h3>生成复习资料</h3>
+    <p style="font-size:13px;color:var(--text-secondary);">
+      源材料：<span id="genSourceInfo">加载中...</span>
+    </p>
+
+    <label>资料类型</label>
+    <div class="check-group" id="genTypes"></div>
+
+    <label>附加要求（可选）</label>
+    <textarea id="genExtra" placeholder="例如：重点讲解第三章、与公式对比分析"></textarea>
+
+    <div id="genProgress" style="margin-top:8px;font-size:13px;color:var(--text-secondary);"></div>
+
+    <div class="modal-buttons">
+      <button class="nav-btn" onclick="closeGenerateModal()" style="height:32px;">取消</button>
+      <button class="nav-btn primary" id="genBtn" onclick="startGenerate()" style="height:32px;">开始生成</button>
+    </div>
+  </div>
+</div>
+
+<!-- ============================================================
+     JavaScript
+     ============================================================ -->
+<script>
+// ============================================================
+// Theme
+// ============================================================
+function setTheme(theme) {
+  var resolved = theme === 'system'
+    ? (window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light')
+    : theme;
+  document.documentElement.setAttribute('data-theme', resolved);
+  localStorage.setItem('la-theme', theme);
+}
+
+function toggleTheme() {
+  var current = document.documentElement.getAttribute('data-theme');
+  var next = current === 'dark' ? 'light' : 'dark';
+  setTheme(next);
+  document.getElementById('themeToggle').textContent = next === 'dark' ? '浅色' : '深色';
+}
+
+// Init theme toggle label
+(function() {
+  var resolved = document.documentElement.getAttribute('data-theme');
+  var btn = document.getElementById('themeToggle');
+  if (btn) btn.textContent = resolved === 'dark' ? '浅色' : '深色';
+})();
+
+// ============================================================
+// State
+// ============================================================
+var API = '/api';
+var currentCourse = '';
+var currentTab = '';
+var tabMaterials = {};       // { typeKey: { content, filename, ... } }
+var scrollPositions = {};    // { typeKey: scrollTop }
+var chatHistory = [];
+var materialList = [];       // [{ filename, material_type, display_name, ... }]
+var kbReady = false;
+var generating = false;
+
+// ============================================================
+// Init
+// ============================================================
+mermaid.initialize({ startOnLoad: false, theme: 'neutral' });
+
+window.addEventListener('DOMContentLoaded', async function() {
+  // Textarea setup
+  var chatTextarea = document.getElementById('chatInput');
+  chatTextarea.addEventListener('input', function() {
+    this.style.height = 'auto';
+    this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+  });
+  chatTextarea.addEventListener('keydown', function(e) {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  await loadCourses();
+  var params = new URLSearchParams(window.location.search);
+  var course = params.get('course');
+  if (course) {
+    document.getElementById('courseSelect').value = course;
+    await onCourseChange();
+  }
+});
+
+// ============================================================
+// Course
+// ============================================================
+async function loadCourses() {
+  try {
+    var res = await fetch(API + '/courses');
+    var data = await res.json();
+    var sel = document.getElementById('courseSelect');
+    data.courses.forEach(function(c) {
+      var opt = document.createElement('option');
+      opt.value = c.name;
+      opt.textContent = c.name + ' (资料' + c.review_materials + ' / KB' + (c.kb_ready ? '✓' : '✗') + ')';
+      sel.appendChild(opt);
+    });
+  } catch (e) {
+    console.error('加载课程失败:', e);
+  }
+}
+
+async function onCourseChange() {
+  currentCourse = document.getElementById('courseSelect').value;
+  if (!currentCourse) return;
+  currentTab = '';
+  tabMaterials = {};
+  scrollPositions = {};
+  materialList = [];
+
+  await loadMaterials();
+  await loadKBStatus();
+  await loadChatHistory();
+}
+
+async function loadMaterials() {
+  try {
+    var res = await fetch(API + '/courses/' + encodeURIComponent(currentCourse) + '/materials');
+    var data = await res.json();
+    materialList = data.materials;
+    renderTabs();
+    if (data.materials.length > 0) {
+      switchTab(getTabKey(data.materials[0]));
+    } else {
+      document.getElementById('contentBody').innerHTML =
+        '<div class="generate-prompt">' +
+        '<p>暂无已生成的资料</p>' +
+        '<button class="btn-generate" onclick="openGenerateModal()">生成第一份复习资料</button>' +
+        '</div>';
+    }
+  } catch (e) {
+    console.error('加载资料失败:', e);
+  }
+}
+
+async function loadKBStatus() {
+  try {
+    var res = await fetch(API + '/courses');
+    var data = await res.json();
+    var course = data.courses.find(function(c) { return c.name === currentCourse; });
+    if (course) {
+      kbReady = course.kb_ready;
+      updateKBIndicator();
+    }
+  } catch (e) {}
+}
+
+async function loadChatHistory() {
+  chatHistory = [];
+  document.getElementById('chatMessages').innerHTML =
+    '<div class="empty-state" style="padding:30px 10px;"><p>在此输入问题，AI 基于课件和录音回答</p></div>';
+}
+
+function updateKBIndicator() {
+  var hdr = document.getElementById('chatHeader');
+  if (kbReady) {
+    hdr.innerHTML = '<span class="kb-badge ready">知识库就绪</span>';
+  } else {
+    hdr.innerHTML = '<span class="kb-badge off">知识库未构建</span>';
+  }
+}
+
+// ============================================================
+// Tabs
+// ============================================================
+var TYPE_MAP = {
+  '复习提纲': { key: 'outline', short: '提纲' },
+  '详细笔记': { key: 'notes', short: '笔记' },
+  '知识结构图': { key: 'graph', short: '结构图' },
+  '自测题库': { key: 'quiz', short: '题库' },
+};
+
+function getTabKey(material) {
+  for (var typeName in TYPE_MAP) {
+    if (material.material_type.indexOf(typeName) !== -1 || material.display_name.indexOf(typeName) !== -1) {
+      return TYPE_MAP[typeName].key;
+    }
+  }
+  return material.material_type.substring(0, 8);
+}
+
+function getTypeNameFromKey(key) {
+  for (var typeName in TYPE_MAP) {
+    if (TYPE_MAP[typeName].key === key) return typeName;
+  }
+  return key;
+}
+
+function renderTabs() {
+  var container = document.getElementById('navTabs');
+  container.innerHTML = '';
+
+  var seen = {};
+  materialList.forEach(function(m) {
+    var key = getTabKey(m);
+    if (seen[key]) return;
+    seen[key] = true;
+    var info = TYPE_MAP[getTypeNameFromKey(key)] || { short: key.substring(0, 4) };
+    var btn = document.createElement('button');
+    btn.className = 'nav-tab';
+    if (key === currentTab) btn.classList.add('active');
+    btn.textContent = info.short;
+    btn.onclick = function() { switchTab(key); };
+    container.appendChild(btn);
+  });
+}
+
+function switchTab(key) {
+  if (currentTab) {
+    scrollPositions[currentTab] = document.getElementById('contentArea').scrollTop;
+  }
+  currentTab = key;
+
+  document.querySelectorAll('.nav-tab').forEach(function(btn) {
+    btn.classList.toggle('active', key === getTabKeyFromLabel(btn.textContent));
+  });
+
+  renderCurrentMaterial();
+
+  requestAnimationFrame(function() {
+    document.getElementById('contentArea').scrollTop = scrollPositions[key] || 0;
+  });
+}
+
+function getTabKeyFromLabel(label) {
+  for (var typeName in TYPE_MAP) {
+    if (TYPE_MAP[typeName].short === label) return TYPE_MAP[typeName].key;
+  }
+  return '';
+}
+
+function findCurrentMaterial() {
+  return materialList.find(function(m) { return getTabKey(m) === currentTab; }) || null;
+}
+
+function renderCurrentMaterial() {
+  var area = document.getElementById('contentBody');
+  var mat = findCurrentMaterial();
+
+  if (!mat) {
+    area.innerHTML = '<div class="empty-state"><p>暂无该类型资料</p></div>';
+    return;
+  }
+
+  if (tabMaterials[currentTab]) {
+    area.innerHTML = renderContent(tabMaterials[currentTab].content);
+    renderMathAndMermaid(area);
+    return;
+  }
+
+  area.innerHTML = '<div class="empty-state"><p>加载中...</p></div>';
+  loadMaterialContent(mat.filename);
+}
+
+async function loadMaterialContent(filename) {
+  try {
+    var res = await fetch(API + '/courses/' + encodeURIComponent(currentCourse) + '/materials');
+    var data = await res.json();
+    var mat = data.materials.find(function(m) { return m.filename === filename; });
+    if (mat && mat.content) {
+      tabMaterials[currentTab] = mat;
+      document.getElementById('contentBody').innerHTML = renderContent(mat.content);
+      renderMathAndMermaid(document.getElementById('contentBody'));
+    }
+  } catch (e) {
+    console.error('加载资料内容失败:', e);
+  }
+}
+
+// ============================================================
+// Rendering
+// ============================================================
+function renderContent(md) {
+  var html;
+  try {
+    html = marked.parse(md);
+  } catch (e) {
+    html = '<pre>' + escapeHtml(md) + '</pre>';
+  }
+  return html;
+}
+
+function escapeHtml(s) {
+  var div = document.createElement('div');
+  div.textContent = s;
+  return div.innerHTML;
+}
+
+function renderMathAndMermaid(container) {
+  try {
+    renderMathInElement(container, {
+      delimiters: [
+        { left: '$$', right: '$$', display: true },
+        { left: '$', right: '$', display: false },
+      ],
+      throwOnError: false,
+    });
+  } catch (e) {
+    console.warn('KaTeX render error:', e);
+  }
+
+  var mermaidBlocks = container.querySelectorAll('pre code.language-mermaid');
+  mermaidBlocks.forEach(async function(block, i) {
+    try {
+      var id = 'mermaid-' + Date.now() + '-' + i;
+      var result = await mermaid.render(id, block.textContent);
+      var wrapper = document.createElement('div');
+      wrapper.innerHTML = result.svg;
+      wrapper.style.textAlign = 'center';
+      wrapper.style.margin = '1em 0';
+      block.parentElement.replaceWith(wrapper);
+    } catch (e) {
+      console.warn('Mermaid render error:', e);
+    }
+  });
+}
+
+function renderContentLight(md) {
+  try {
+    return marked.parse(md);
+  } catch (e) {
+    return '<pre>' + escapeHtml(md) + '</pre>';
+  }
+}
+
+// ============================================================
+// Generate
+// ============================================================
+async function openGenerateModal() {
+  if (!currentCourse) { alert('请先选择课程'); return; }
+
+  try {
+    var res = await fetch(API + '/courses/' + encodeURIComponent(currentCourse) + '/sources');
+    var data = await res.json();
+    document.getElementById('genSourceInfo').textContent =
+      '转录 ' + data.transcripts.length + ' 份, 课件 ' + data.docs.length + ' 份';
+  } catch (e) {
+    document.getElementById('genSourceInfo').textContent = '加载失败';
+  }
+
+  var types = [
+    '复习提纲（核心概念 + 重点/难点标注 + 公式定理）',
+    '详细笔记（逐章知识点详细梳理）',
+    '知识结构图（章节层级结构 + 知识关联）',
+    '自测题库（单选题 + 简答题 + 答案）',
+  ];
+  document.getElementById('genTypes').innerHTML = types.map(function(t, i) {
+    return '<label><input type="checkbox" value="' + escapeHtml(t) + '"' + (i === 0 ? ' checked' : '') + '> ' + escapeHtml(t) + '</label>';
+  }).join('');
+
+  document.getElementById('genExtra').value = '';
+  document.getElementById('genProgress').textContent = '';
+  document.getElementById('genBtn').disabled = false;
+  document.getElementById('genModal').classList.add('open');
+}
+
+function closeGenerateModal() {
+  document.getElementById('genModal').classList.remove('open');
+}
+
+function setGenerating(active) {
+  generating = active;
+  document.querySelectorAll('.nav-tab').forEach(function(btn) {
+    btn.disabled = active;
+  });
+  document.getElementById('genBtn').disabled = active;
+}
+
+async function startGenerate() {
+  var checks = document.querySelectorAll('#genTypes input:checked');
+  var materialTypes = Array.from(checks).map(function(c) { return c.value; });
+  if (materialTypes.length === 0) { alert('请选择至少一种资料类型'); return; }
+
+  var customExtra = document.getElementById('genExtra').value;
+
+  setGenerating(true);
+  document.getElementById('genProgress').textContent = '正在生成...';
+  closeGenerateModal();
+
+  var body = document.getElementById('contentBody');
+  body.innerHTML = '<div class="empty-state"><p>正在生成复习资料...</p></div>';
+
+  for (var typeName in TYPE_MAP) {
+    if (materialTypes[0].indexOf(typeName) !== -1) {
+      currentTab = TYPE_MAP[typeName].key;
+      break;
+    }
+  }
+
+  try {
+    var res = await fetch(
+      API + '/courses/' + encodeURIComponent(currentCourse) + '/generate',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ material_types: materialTypes, custom_extra: customExtra }),
+      }
+    );
+
+    var reader = res.body.getReader();
+    var decoder = new TextDecoder();
+    var buffer = '';
+    var streamContent = '';
+    var lastKatexTime = 0;
+
+    body.innerHTML = '';
+
+    while (true) {
+      var step = await reader.read();
+      if (step.done) break;
+
+      buffer += decoder.decode(step.value, { stream: true });
+      var lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        if (line.indexOf('data: ') !== 0) continue;
+        try {
+          var evt = JSON.parse(line.slice(6));
+          if (evt.type === 'chunk') {
+            streamContent += evt.content;
+            body.innerHTML = renderContentLight(streamContent);
+            var now = Date.now();
+            if (now - lastKatexTime > 300) {
+              renderMathAndMermaid(body);
+              lastKatexTime = now;
+            }
+            document.getElementById('contentArea').scrollTop = document.getElementById('contentArea').scrollHeight;
+          } else if (evt.type === 'status') {
+            var prog = document.getElementById('genProgress');
+            if (prog) prog.textContent = evt.message;
+          } else if (evt.type === 'done') {
+            streamContent = '';
+            body.innerHTML = renderContent(body.textContent || streamContent);
+            await loadMaterials();
+            var mat = findCurrentMaterial();
+            if (mat) {
+              await loadMaterialContent(mat.filename);
+            }
+            renderMathAndMermaid(body);
+            if (evt.materials && evt.materials.length > 0) {
+              for (var tn in TYPE_MAP) {
+                if (evt.materials[0].material_type && evt.materials[0].material_type.indexOf(tn) !== -1) {
+                  currentTab = TYPE_MAP[tn].key;
+                  break;
+                }
+              }
+              renderTabs();
+            }
+          } else if (evt.type === 'error') {
+            body.innerHTML += '<div style="color:#e5484d;margin-top:8px;">错误: ' + escapeHtml(evt.message) + '</div>';
+          }
+        } catch (e) {}
+      }
+    }
+
+    if (streamContent) {
+      body.innerHTML = renderContent(streamContent);
+    }
+    renderMathAndMermaid(body);
+
+  } catch (e) {
+    body.innerHTML = '<div style="color:#e5484d;">生成失败: ' + escapeHtml(e.message) + '</div>';
+  }
+
+  setGenerating(false);
+  document.getElementById('genProgress').textContent = '';
+}
+
+// ============================================================
+// Chat
+// ============================================================
+async function sendMessage() {
+  if (!currentCourse) { alert('请先选择课程'); return; }
+  if (!kbReady) { alert('请先在 Streamlit 页面构建知识库'); return; }
+
+  var input = document.getElementById('chatInput');
+  var message = input.value.trim();
+  if (!message) return;
+  input.value = '';
+  input.style.height = 'auto';
+  input.disabled = true;
+  document.getElementById('sendBtn').disabled = true;
+
+  appendChatMessage('user', message);
+  chatHistory.push({ role: 'user', content: message });
+
+  var aiEl = appendChatMessage('assistant', '');
+  var statusEl = document.getElementById('chatStatus');
+  statusEl.textContent = '思考中...';
+
+  try {
+    var res = await fetch(
+      API + '/courses/' + encodeURIComponent(currentCourse) + '/chat',
+      {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ message: message, history: chatHistory.slice(0, -1) }),
+      }
+    );
+
+    if (!res.ok) {
+      var err = await res.json();
+      throw new Error(err.detail || 'HTTP ' + res.status);
+    }
+
+    var reader = res.body.getReader();
+    var decoder = new TextDecoder();
+    var buffer = '';
+    var fullContent = '';
+    var lastKatexTime = 0;
+
+    while (true) {
+      var step = await reader.read();
+      if (step.done) break;
+
+      buffer += decoder.decode(step.value, { stream: true });
+      var lines = buffer.split('\n');
+      buffer = lines.pop();
+
+      for (var i = 0; i < lines.length; i++) {
+        var line = lines[i];
+        if (line.indexOf('data: ') !== 0) continue;
+        try {
+          var evt = JSON.parse(line.slice(6));
+          if (evt.type === 'chunk') {
+            fullContent += evt.content;
+            aiEl.querySelector('.msg-content').innerHTML = renderContentLight(fullContent);
+            var now = Date.now();
+            if (now - lastKatexTime > 300) {
+              renderMathAndMermaid(aiEl);
+              lastKatexTime = now;
+            }
+            scrollChatBottom();
+          } else if (evt.type === 'done') {
+            fullContent = evt.content || fullContent;
+            aiEl.querySelector('.msg-content').innerHTML = renderContent(fullContent);
+            renderMathAndMermaid(aiEl);
+            if (evt.sources && evt.sources.length > 0) {
+              var srcDiv = document.createElement('details');
+              srcDiv.className = 'chat-sources';
+              srcDiv.innerHTML = '<summary>参考来源</summary>' +
+                evt.sources.map(function(s) {
+                  return '<div class="src-item"><strong>' + escapeHtml(s.source_file) + '</strong> (' + s.source_type + ', 相似度 ' + s.score.toFixed(2) + ')<br>' + escapeHtml(s.content.substring(0, 200)) + '</div>';
+                }).join('');
+              aiEl.appendChild(srcDiv);
+            }
+            chatHistory.push({ role: 'assistant', content: fullContent, sources: evt.sources || [] });
+            statusEl.textContent = '';
+          } else if (evt.type === 'error') {
+            aiEl.querySelector('.msg-content').innerHTML =
+              '<span style="color:#e5484d;">错误: ' + escapeHtml(evt.message) + '</span>';
+            statusEl.textContent = '';
+          }
+        } catch (e) {}
+      }
+    }
+  } catch (e) {
+    aiEl.querySelector('.msg-content').innerHTML =
+      '<span style="color:#e5484d;">请求失败: ' + escapeHtml(e.message) + '</span>';
+    statusEl.textContent = '';
+  }
+
+  input.disabled = false;
+  document.getElementById('sendBtn').disabled = false;
+  input.focus();
+}
+
+function appendChatMessage(role, content) {
+  var container = document.getElementById('chatMessages');
+  var empty = container.querySelector('.empty-state');
+  if (empty) empty.remove();
+
+  var el = document.createElement('div');
+  el.className = 'msg msg-' + role;
+  var inner = role === 'assistant' && content ? renderContent(content) : escapeHtml(content);
+  el.innerHTML = '<div class="msg-content">' + inner + '</div>';
+  container.appendChild(el);
+  scrollChatBottom();
+  return el;
+}
+
+function scrollChatBottom() {
+  var el = document.getElementById('chatMessages');
+  var threshold = 80;
+  var isNearBottom = el.scrollHeight - el.scrollTop - el.clientHeight < threshold;
+  if (isNearBottom) {
+    el.scrollTop = el.scrollHeight;
+  }
+}
+
+// ============================================================
+// Export
+// ============================================================
+function exportChat() {
+  if (chatHistory.length === 0) { alert('暂无对话内容'); return; }
+  var text = chatHistory.map(function(m) {
+    var label = m.role === 'user' ? '你' : 'AI';
+    return '**' + label + '**: ' + m.content;
+  }).join('\n\n---\n\n');
+  var blob = new Blob([text], { type: 'text/markdown' });
+  var a = document.createElement('a');
+  a.href = URL.createObjectURL(blob);
+  a.download = (currentCourse || 'chat') + '_对话导出.md';
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+</script>
+</body>
+</html>

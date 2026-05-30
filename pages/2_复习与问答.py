@@ -591,8 +591,17 @@ inject_mermaid()
 st.subheader(t("nav.workspace"))
 st.caption(t("page2.caption"))
 
-# ---- 课程检查 ----
+# ---- 新界面入口 ----
 current = get_state("current_course", "")
+if current:
+    st.markdown(
+        f'<a href="http://localhost:8502/assets/review.html?course={current}" '
+        f'target="_blank" style="font-size:0.85rem;">'
+        f'在新界面中打开（推荐）</a>',
+        unsafe_allow_html=True,
+    )
+
+# ---- 课程检查 ----
 if not current:
     st.warning(t("common.no_course"))
     st.stop()
