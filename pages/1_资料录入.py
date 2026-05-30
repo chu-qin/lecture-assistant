@@ -36,7 +36,7 @@ config = get_state("app_config")
 # ====================================================================
 stats = cm.get_review_stats(current)
 if stats["audio_files"] or stats["courseware_files"] or stats["transcripts"]:
-    with st.expander(t("page1.overview"), expanded=False):
+    with st.expander(t("page1.overview"), expanded=False, icon=":material/bar_chart:"):
         cols = st.columns(4)
         cols[0].metric(t("page1.audio_files"), stats["audio_files"])
         cols[1].metric(t("page1.transcripts"), stats["transcripts"])
@@ -67,9 +67,10 @@ with tab_asr:
 
         col1, col2, _ = st.columns([1, 1, 4])
         start_btn = col1.button(
-            t("page1.start_transcribe"), type="primary", use_container_width=True
+            t("page1.start_transcribe"), type="primary", use_container_width=True,
+            icon=":material/mic:",
         )
-        clear_btn = col2.button(t("page1.clear_results"), use_container_width=True)
+        clear_btn = col2.button(t("page1.clear_results"), use_container_width=True, icon=":material/clear_all:")
 
         if clear_btn:
             set_state("asr_results", [])
@@ -212,7 +213,7 @@ with tab_asr:
                     col_name.caption(f"    {summary_text}")
                 else:
                     col_name.caption(f"  {display_name}")
-                if col_del.button("删除", key=f"del_tx_{txt_file.stem}"):
+                if col_del.button("删除", key=f"del_tx_{txt_file.stem}", icon=":material/delete:"):
                     # 删除对应的音频文件、转录文件和摘要
                     audio_name = txt_file.stem.replace("_transcript", "")
                     for ext in [".mp3", ".wav", ".m4a", ".flac", ".ogg"]:
@@ -262,6 +263,7 @@ with tab_asr:
                         file_name=f"{Path(r['name']).stem}_transcript.txt",
                         mime="text/plain",
                         key=f"dl_{r['name']}",
+                        icon=":material/download:",
                     )
                 else:
                     st.error(t("page1.parse_fail", error=r.get("error", t("common.unknown_error"))))
@@ -272,7 +274,7 @@ with tab_asr:
             full_asr_text = "\n\n".join(
                 f"## {r['name']}\n\n{r['result'].full_text}" for r in success_results if r["result"]
             )
-            with st.expander("查看 AI 修正结果", expanded=True):
+            with st.expander("查看 AI 修正结果", expanded=True, icon=":material/compare:"):
                 col_orig, col_corr = st.columns(2)
                 with col_orig:
                     st.caption("原始转录")
@@ -283,7 +285,7 @@ with tab_asr:
                         key="corr_orig",
                         label_visibility="collapsed",
                     )
-                    if st.button("放弃修正", use_container_width=True):
+                    if st.button("放弃修正", use_container_width=True, icon=":material/cancel:"):
                         set_state("asr_corrected", "")
                         st.rerun()
                 with col_corr:
@@ -296,7 +298,8 @@ with tab_asr:
                         label_visibility="collapsed",
                     )
                     if st.button(
-                        "确认修正，更新知识库文本", type="primary", use_container_width=True
+                        "确认修正，更新知识库文本", type="primary", use_container_width=True,
+                        icon=":material/check_circle:",
                     ):
                         state = cm.load_state(current)
                         state.transcript_text = corrected
@@ -325,14 +328,15 @@ with tab_parser:
     if uploaded_docs:
         st.info(t("page1.uploaded_count", count=len(uploaded_docs)))
 
-        with st.expander(t("page1.parse_options")):
+        with st.expander(t("page1.parse_options"), icon=":material/tune:"):
             enable_formula = st.checkbox(t("page1.enable_formula"), value=True)
             enable_table = st.checkbox(t("page1.enable_table"), value=True)
             parse_method = st.selectbox(t("page1.parse_method"), ["auto", "txt", "ocr"], index=0)
 
         col1, col2, _ = st.columns([1, 1, 4])
-        start_btn = col1.button(t("page1.start_parse"), type="primary", use_container_width=True)
-        clear_btn = col2.button(t("page1.clear_all"), use_container_width=True)
+        start_btn = col1.button(t("page1.start_parse"), type="primary", use_container_width=True,
+                                  icon=":material/description:")
+        clear_btn = col2.button(t("page1.clear_all"), use_container_width=True, icon=":material/clear_all:")
 
         if clear_btn:
             set_state("parsed_results", [])
@@ -404,7 +408,7 @@ with tab_parser:
                     else f"  {md_file.name}"
                 )
                 col_info.caption(display)
-                if col_del.button("删除", key=f"del_doc_{md_file.stem}"):
+                if col_del.button("删除", key=f"del_doc_{md_file.stem}", icon=":material/delete:"):
                     md_file.unlink()
                     # 尝试删除对应的源文件
                     for src_dir in ["courseware", "books"]:
@@ -428,7 +432,7 @@ with tab_parser:
         for tab, result in zip(tabs, parsed_results):
             with tab:
                 if result.markdown_content:
-                    with st.expander(t("page1.markdown_preview"), expanded=True):
+                    with st.expander(t("page1.markdown_preview"), expanded=True, icon=":material/preview:"):
                         preview = result.markdown_content[:5000]
                         if len(result.markdown_content) > 5000:
                             preview += f"\n\n{t('page1.content_truncated')}"
@@ -457,6 +461,7 @@ with tab_parser:
                         data=result.markdown_content.encode("utf-8"),
                         file_name=f"{file_name}.md",
                         mime="text/markdown",
+                        icon=":material/download:",
                     )
                 elif result.metadata.get("error"):
                     st.error(t("page1.parse_fail", error=result.metadata["error"]))
@@ -475,8 +480,10 @@ with tab_book:
         st.info(t("page1.book_uploaded_count", count=len(uploaded_books)))
 
         col1, col2, _ = st.columns([1, 1, 4])
-        start_btn = col1.button(t("page1.book_import"), type="primary", use_container_width=True)
-        clear_btn = col2.button(t("page1.clear_all"), use_container_width=True, key="book_clear")
+        start_btn = col1.button(t("page1.book_import"), type="primary", use_container_width=True,
+                                  icon=":material/import_contacts:")
+        clear_btn = col2.button(t("page1.clear_all"), use_container_width=True, key="book_clear",
+                                 icon=":material/clear_all:")
 
         if clear_btn:
             set_state("book_results", [])
@@ -544,7 +551,7 @@ with tab_book:
             for md_file in sorted(existing_md):
                 col_info, col_del = st.columns([5, 1])
                 col_info.caption(f"  {md_file.name}")
-                if col_del.button("删除", key=f"del_book_{md_file.stem}"):
+                if col_del.button("删除", key=f"del_book_{md_file.stem}", icon=":material/delete:"):
                     md_file.unlink()
                     # 尝试删除对应的源文件
                     for src_dir in ["books", "courseware"]:
@@ -577,7 +584,7 @@ with tab_book:
                     )
                     info_cols[2].metric(t("page1.book_chapters"), meta.get("chapter_count", 0))
 
-                    with st.expander(t("page1.book_preview"), expanded=False):
+                    with st.expander(t("page1.book_preview"), expanded=False, icon=":material/preview:"):
                         preview = result.markdown_content[:5000]
                         if len(result.markdown_content) > 5000:
                             preview += f"\n\n{t('page1.content_truncated')}"
@@ -603,6 +610,7 @@ with tab_book:
                         file_name=f"{file_name}.md",
                         mime="text/markdown",
                         key=f"dl_book_{file_name}",
+                        icon=":material/download:",
                     )
                 elif result.metadata.get("error"):
                     st.error(t("page1.book_import_fail", error=result.metadata["error"]))

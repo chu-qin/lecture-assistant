@@ -90,7 +90,7 @@ for i, c_name in enumerate(courses):
             col_a.page_link("pages/1_资料录入.py", label=t("nav.input"))
             col_b.page_link("pages/2_复习与问答.py", label=t("nav.workspace"))
         else:
-            if st.button(t("app.enter_course"), key=f"enter_{c_name}", use_container_width=True):
+            if st.button(t("app.enter_course"), key=f"enter_{c_name}", use_container_width=True, icon=":material/arrow_forward:"):
                 set_state("current_course", c_name)
                 from src.ui.session_state import reset_course_state
 
@@ -102,7 +102,7 @@ for i, c_name in enumerate(courses):
 
 st.divider()
 
-with st.expander(t("app.about")):
+with st.expander(t("app.about"), icon=":material/info:"):
     st.markdown(f"""
     | {t("app.about.component")} | {t("app.about.tech")} |
     |------|------|

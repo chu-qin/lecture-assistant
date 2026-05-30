@@ -2,8 +2,8 @@
 
 课堂录音转文字 + 课件解析 + AI 复习资料生成 + RAG 智能问答，一站式 Streamlit 应用。
 
-[![Python](https://img.shields.io/badge/python-3.10%2B-blue)](https://www.python.org/)
-[![Streamlit](https://img.shields.io/badge/streamlit-1.28%2B-red)](https://streamlit.io/)
+[![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
+[![Streamlit](https://img.shields.io/badge/streamlit-1.57-red)](https://streamlit.io/)
 [![Tests](https://img.shields.io/badge/tests-169%20passed-green)](tests/)
 [![Ruff](https://img.shields.io/badge/lint-ruff-261230)](https://github.com/astral-sh/ruff)
 
@@ -15,35 +15,34 @@
 
 一个完整的课堂学习辅助工具，覆盖从原始材料到结构化复习资料的全链路：
 
-**材料录入**
-- 语音转文字 — FunASR SenseVoiceSmall 模型，支持中/英/粤语，内置 VAD + 标点恢复
-- 课件解析 — PPT/PPTX 纯 Python 提取，PDF 经 MinerU 转结构化 Markdown（公式 -> LaTeX，表格保留）
-- 书本导入 — EPUB 电子书导入，自动提取元数据/章节，转结构化 Markdown
+### 材料录入
+- **语音转文字** — FunASR SenseVoiceSmall 模型，支持中/英/粤语，内置 VAD + 标点恢复
+- **课件解析** — PPT/PPTX 纯 Python 提取，PDF 经 MinerU 转结构化 Markdown（公式 → LaTeX，表格保留）
+- **书本导入** — EPUB 电子书导入，自动提取元数据/章节，转结构化 Markdown
 
-**复习生成**
+### 复习生成
 - 自动合并课件内容与录音转录文本，调用 LLM 生成四类复习资料：
-  - 复习提纲（概念标注重点/难点 + 公式定理 + 常见误区)
-  - 详细笔记（逐章逐节知识点详解 + 例题)
-  - 知识结构图（章节层级 + 跨章节关联)
-  - 自测题库（单选/填空/简答/计算 + 答案解析)
+  - **复习提纲** — 概念标注重点/难点 + 公式定理 + 常见误区
+  - **详细笔记** — 逐章逐节知识点详解 + 例题
+  - **知识结构图** — 章节层级 + 跨章节关联（自动渲染 Mermaid 图表）
+  - **自测题库** — 单选/填空/简答/计算 + 答案解析
 - 多轮续写策略：长内容自动续写最多 3 轮，流式渲染带节流
 
-**RAG 智能问答**
+### RAG 智能问答
 - 基于课件 + 录音转录 + 复习资料构建知识库
 - ChromaDB 向量存储 + BGE 嵌入模型，按课程隔离 collection
 - 检索增强生成：区分一手资料（课件/录音）和 AI 生成资料（复习材料），优先参考原文
 
-**多课程管理**
+### 多课程管理
 - 每课程独立目录，数据在 `data/courses/<课程名>/`
 - 课程状态持久化（JSON），聊天历史可导出 Markdown
 
-**多语言**
-- 侧边栏一键切换中/英文，155 个翻译 key 覆盖全部 UI
+### 多语言
+- 侧边栏一键切换中/英文，179 个翻译 key 覆盖全部 UI
 - Prompt 模板按语言分目录，LLM 调用自动匹配
 
-**多 LLM Provider**
-- 支持 DeepSeek、OpenAI，预留 Anthropic 扩展点
-- 工厂模式 `get_llm(config)` 统一分发
+### 多 LLM Provider
+- 支持 DeepSeek、OpenAI，工厂模式 `get_llm(config)` 统一分发
 
 ---
 
@@ -78,7 +77,7 @@ DEEPSEEK_API_KEY=sk-your-key-here
 
 > 注册 [DeepSeek 开放平台](https://platform.deepseek.com/)，在「API Keys」页面创建 Key，新用户免费赠送额度。
 >
-> `.env` 文件已被 `.gitignore` 排除，不会提交到 GitHub，不用担心泄露。
+> `.env` 文件已被 `.gitignore` 排除，不会提交到 GitHub。
 
 语音转写和课件解析不需要 Key 即可使用，仅复习资料生成和智能问答需要。
 
@@ -102,9 +101,9 @@ streamlit run run.py
 
 ### 5. 使用流程
 
-1. 侧边栏点击「创建课程」，输入课程名称
-2. 进入「资料录入」页面，上传课堂录音或课件文件
-3. 进入「复习与问答」页面，选择复习资料类型，点击生成
+1. 侧边栏「新建课程」创建课程
+2. 进入「资料录入」上传课堂录音或课件
+3. 进入「复习与问答」选择资料类型，点击生成
 4. 在聊天框中提问，AI 基于课件和录音内容回答
 
 ---
@@ -115,7 +114,7 @@ streamlit run run.py
 lecture-assistant/
 ├── run.py                          # Streamlit 入口
 ├── pages/
-│   ├── 1_资料录入.py                # 语音转文字 + 课件解析
+│   ├── 1_资料录入.py                # 语音转文字 + 课件解析 + 书本导入
 │   └── 2_复习与问答.py              # 复习资料生成 + RAG 问答
 ├── src/
 │   ├── config.py                   # 配置加载 + 模型缓存管理
@@ -140,14 +139,16 @@ lecture-assistant/
 │   │   └── chroma_store.py         #   ChromaDB 向量存储
 │   ├── merger/
 │   │   └── content_merger.py       # 课件 + 录音内容合并
+│   ├── search/
+│   │   └── web_search.py           # 联网搜索补充
 │   ├── ui/
-│   │   ├── sidebar.py              # 统一侧边栏（课程选择 + 导航 + 语言切换）
+│   │   ├── sidebar.py              # 侧边栏（课程选择 + 导航 + 语言切换）
 │   │   ├── session_state.py        # Session State 管理
-│   │   └── theme.py                # 自定义 CSS 注入 + 响应式布局
+│   │   └── theme.py                # CSS 注入 + Mermaid/布局 JS
 │   └── i18n/
 │       ├── __init__.py             # t() 函数 + 语言管理
-│       ├── zh.json                 # 中文翻译 (155 keys)
-│       └── en.json                 # 英文翻译 (155 keys)
+│       ├── zh.json                 # 中文翻译
+│       └── en.json                 # 英文翻译
 ├── prompts/
 │   ├── zh/                         # 中文 Prompt 模板
 │   └── en/                         # 英文 Prompt 模板
@@ -166,16 +167,16 @@ lecture-assistant/
 ## 架构
 
 ```
-用户 -> Streamlit UI (run.py + pages/)
-     -> CourseManager (多课程隔离, 状态持久化)
-     -> FunASR (语音转写) + MinerU (文档解析) + EpubParser (书本导入)
-     -> ContentMerger (课件 + 录音合并)
-     -> LLM Factory (DeepSeek / OpenAI / Anthropic)
-        -> 复习资料生成 (多轮续写)
-        -> RAG 智能问答 (ChromaDB + BGE)
+用户 → Streamlit UI (run.py + pages/)
+     → CourseManager (多课程隔离, 状态持久化)
+     → FunASR (语音转写) + MinerU (文档解析) + EpubParser (书本导入)
+     → ContentMerger (课件 + 录音合并)
+     → LLM Factory (DeepSeek / OpenAI)
+        → 复习资料生成 (多轮续写)
+        → RAG 智能问答 (ChromaDB + BGE)
 ```
 
-- 每个功能模块遵循 `base.py` (抽象基类 + 数据契约) + 具体实现的模式
+- 每个功能模块遵循 `base.py`（抽象基类 + 数据契约）+ 具体实现的模式
 - 配置通过 `@dataclass` 集中管理，支持 `${ENV_VAR:default}` 环境变量引用
 - 所有文件路径使用 `pathlib.Path`，用户数据通过 `CourseManager` 统一管理
 
@@ -200,10 +201,9 @@ parser:
 llm:
   provider: "deepseek"    # deepseek / openai
   api_key: "${DEEPSEEK_API_KEY}"
-  openai_api_key: "${OPENAI_API_KEY:}"        # 使用 OpenAI 时填写
-  anthropic_api_key: "${ANTHROPIC_API_KEY:}"  # 预留
+  openai_api_key: "${OPENAI_API_KEY:}"
   base_url: "https://api.deepseek.com"
-  model: "deepseek-v4-flash"    # deepseek-v4-flash (快速) / deepseek-v4-pro (旗舰)
+  model: "deepseek-v4-flash"
   temperature: 0.3
   max_tokens: 4096
   max_retries: 3
@@ -222,6 +222,25 @@ chromadb:
 ```
 
 GPU 加速：将 `asr.device` 和 `embedding.device` 改为 `cuda`，需安装 CUDA 版 PyTorch。
+
+---
+
+## 技术栈
+
+| 组件 | 技术 | 说明 |
+|------|------|------|
+| 语音识别 | FunASR SenseVoiceSmall | 阿里达摩院，多语言 + VAD + 标点恢复 |
+| 文档解析 | python-pptx + olefile + MinerU magic-pdf + ebooklib + html2text | PPT/PDF/EPUB 转结构化 Markdown |
+| 大语言模型 | DeepSeek / OpenAI API | OpenAI 兼容协议，工厂模式分发 |
+| 文本嵌入 | BAAI/bge-small-zh-v1.5 | 512 维，cosine 距离 |
+| 向量存储 | ChromaDB | 按课程隔离 collection，PersistentClient |
+| UI 框架 | Streamlit 1.57 | 浏览器界面，响应式 CSS |
+| 图标 | Google Material Symbols | `:material/xxx:` 内联图标 |
+| 公式渲染 | KaTeX + MathJax | LaTeX 数学公式客户端渲染 |
+| 图表 | Mermaid.js | 知识结构图等图表客户端渲染 |
+| 多语言 | 自研轻量 JSON i18n | 179 keys，无 gettext 依赖 |
+| 音频处理 | ffmpeg | 绿色版，自动下载至 `tools/` |
+| 代码质量 | ruff + mypy + pytest | 零 lint 错误，169 个测试 |
 
 ---
 
@@ -244,7 +263,7 @@ ruff format src/ pages/
 mypy src/
 ```
 
-**测试覆盖 (169 个)**：config, chunker, embedder, llm, merger, course_manager, chroma_store, epub_parser — 均通过 mock 隔离外部依赖，无需真实 ChromaDB 或 API Key。
+**测试覆盖（169 个）**：config, chunker, embedder, llm, merger, course_manager, chroma_store, epub_parser — 均通过 mock 隔离外部依赖，无需真实 ChromaDB 或 API Key。
 
 修改 `src/` 模块后如果出现 `AttributeError`，清理字节码缓存后重试：
 
@@ -267,20 +286,6 @@ find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null
 **数据在哪里？** `data/courses/<课程名>/`，按类型分子目录。删除项目目录即彻底清除。
 
 ---
-
-## 技术栈
-
-| 组件 | 技术 | 说明 |
-|------|------|------|
-| 语音识别 | FunASR SenseVoiceSmall | 阿里达摩院，多语言 + VAD + 标点恢复 |
-| 文档解析 | python-pptx + olefile + MinerU magic-pdf + ebooklib + html2text | PPT/PDF/EPUB 转结构化 Markdown |
-| 大语言模型 | DeepSeek / OpenAI API | OpenAI 兼容协议，工厂模式分发 |
-| 文本嵌入 | BAAI/bge-small-zh-v1.5 | 512 维，cosine 距离 |
-| 向量存储 | ChromaDB | 按课程隔离 collection，PersistentClient |
-| UI 框架 | Streamlit 1.28+ | 浏览器界面，响应式 CSS |
-| 多语言 | 自研轻量 JSON i18n | 155 keys，无 gettext 依赖 |
-| 音频处理 | ffmpeg | 绿色版，自动下载至 `tools/` |
-| 代码质量 | ruff + mypy + pytest | 零 lint 错误，169 个测试 |
 
 ## 许可证
 

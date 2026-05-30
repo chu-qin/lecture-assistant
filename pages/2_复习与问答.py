@@ -364,7 +364,7 @@ def _run_generation(
                 )
             )
             col_resume, col_discard = st.columns(2)
-            if col_resume.button(t("page2.resume"), type="primary", use_container_width=True):
+            if col_resume.button(t("page2.resume"), type="primary", use_container_width=True, icon=":material/resume:"):
                 full_output = ckpt.get("full_output", "")
                 saved_generate_types = ckpt.get("generate_types", generate_types)
                 saved_custom_extra = ckpt.get("custom_extra", custom_extra)
@@ -372,7 +372,7 @@ def _run_generation(
                 custom_extra = saved_custom_extra
                 prompt = _build_generation_prompt(merged.content, generate_types, custom_extra)
                 resume_from = ckpt.get("pass_num", 1) + 1
-            elif col_discard.button(t("page2.discard"), use_container_width=True):
+            elif col_discard.button(t("page2.discard"), use_container_width=True, icon=":material/delete:"):
                 checkpoint_path.unlink(missing_ok=True)
                 st.rerun()
             else:
@@ -704,6 +704,7 @@ with left_col:
         with st.expander(
             f"+ {t('page2.new_generation')}",
             expanded=not bool(cm.list_review_materials(current)),
+            icon=":material/auto_awesome:",
         ):
             st.caption(t("page2.select_sources"))
 
@@ -763,7 +764,8 @@ with left_col:
 
                 if generate_types and (use_transcripts or use_docs):
                     if st.button(
-                        t("page2.start_generate"), type="primary", use_container_width=True
+                        t("page2.start_generate"), type="primary", use_container_width=True,
+                        icon=":material/auto_awesome:",
                     ):
                         _run_generation(
                             cm,
@@ -824,9 +826,11 @@ with left_col:
                             mime="text/markdown",
                             use_container_width=True,
                             key=f"dl_{m.filename}",
+                            icon=":material/download:",
                         )
                         if col_del.button(
-                            t("page2.delete"), key=f"del_{m.filename}", use_container_width=True
+                            t("page2.delete"), key=f"del_{m.filename}", use_container_width=True,
+                            icon=":material/delete:",
                         ):
                             cm.delete_review_material(current, m.filename)
                             if selected_mat == m.filename:
@@ -838,6 +842,7 @@ with left_col:
                             t("page2.import_kb"),
                             key=f"import_{m.filename}",
                             use_container_width=True,
+                            icon=":material/publish:",
                         ):
                             with st.spinner(t("page2.building_index")):
                                 try:
@@ -864,7 +869,7 @@ with right_col:
         else:
             kb_col1.warning(t("page2.kb_not_ready"))
 
-        if kb_col2.button(t("page2.build_kb"), use_container_width=True, disabled=vs_ready):
+        if kb_col2.button(t("page2.build_kb"), use_container_width=True, disabled=vs_ready, icon=":material/psychology:"):
             with st.spinner(t("page2.building_kb")):
                 try:
                     _build_kb_from_sources(
@@ -879,7 +884,7 @@ with right_col:
                 except Exception as e:
                     st.error(t("page2.build_fail", error=str(e)))
 
-        if kb_col3.button(t("page2.clear"), use_container_width=True):
+        if kb_col3.button(t("page2.clear"), use_container_width=True, icon=":material/delete_sweep:"):
             if vector_store:
                 vector_store.delete_collection()
             set_state("vector_store_ready", False)
@@ -906,7 +911,7 @@ with right_col:
                     if msg.get("sources") and is_last_assistant:
                         col_src, col_btn = st.columns([20, 1])
                         with col_src:
-                            with st.expander(t("page2.sources")):
+                            with st.expander(t("page2.sources"), icon=":material/source:"):
                                 for src in msg["sources"]:
                                     sim_score = f"{src.get('score', 0):.2f}"
                                     st.caption(
@@ -916,28 +921,28 @@ with right_col:
                                     st.text(src.get("content", "")[:300])
                         with col_btn:
                             show_key = f"show_regen_{i}"
-                            if st.button("↻", key=f"regen_toggle_{i}"):
+                            if st.button("↻", key=f"regen_toggle_{i}", icon=":material/refresh:"):
                                 set_state(show_key, not get_state(show_key, False))
                                 st.rerun()
 
                         if get_state(show_key, False):
                             col_r1, col_r2, col_r3, col_r4 = st.columns([1, 1, 1, 8])
                             with col_r1:
-                                if st.button(t("page2.regen"), key=f"regen_{i}"):
+                                if st.button(t("page2.regen"), key=f"regen_{i}", icon=":material/refresh:"):
                                     set_state(show_key, False)
                                     chat_history.pop()
                                     set_state("chat_history", chat_history)
                                     set_state("regenerate_style", "default")
                                     st.rerun()
                             with col_r2:
-                                if st.button(t("page2.regen_detail"), key=f"regen_d_{i}"):
+                                if st.button(t("page2.regen_detail"), key=f"regen_d_{i}", icon=":material/zoom_in:"):
                                     set_state(show_key, False)
                                     chat_history.pop()
                                     set_state("chat_history", chat_history)
                                     set_state("regenerate_style", "more_detail")
                                     st.rerun()
                             with col_r3:
-                                if st.button(t("page2.regen_casual"), key=f"regen_c_{i}"):
+                                if st.button(t("page2.regen_casual"), key=f"regen_c_{i}", icon=":material/chat:"):
                                     set_state(show_key, False)
                                     chat_history.pop()
                                     set_state("chat_history", chat_history)
@@ -945,7 +950,7 @@ with right_col:
                                     st.rerun()
 
                     elif msg.get("sources"):
-                        with st.expander(t("page2.sources")):
+                        with st.expander(t("page2.sources"), icon=":material/source:"):
                             for src in msg["sources"]:
                                 sim_score = f"{src.get('score', 0):.2f}"
                                 st.caption(
@@ -958,28 +963,28 @@ with right_col:
                         col_empty, col_btn = st.columns([20, 1])
                         with col_btn:
                             show_key = f"show_regen_{i}"
-                            if st.button("↻", key=f"regen_toggle_{i}"):
+                            if st.button("↻", key=f"regen_toggle_{i}", icon=":material/refresh:"):
                                 set_state(show_key, not get_state(show_key, False))
                                 st.rerun()
 
                         if get_state(show_key, False):
                             col_r1, col_r2, col_r3, col_r4 = st.columns([1, 1, 1, 8])
                             with col_r1:
-                                if st.button(t("page2.regen"), key=f"regen_{i}"):
+                                if st.button(t("page2.regen"), key=f"regen_{i}", icon=":material/refresh:"):
                                     set_state(show_key, False)
                                     chat_history.pop()
                                     set_state("chat_history", chat_history)
                                     set_state("regenerate_style", "default")
                                     st.rerun()
                             with col_r2:
-                                if st.button(t("page2.regen_detail"), key=f"regen_d_{i}"):
+                                if st.button(t("page2.regen_detail"), key=f"regen_d_{i}", icon=":material/zoom_in:"):
                                     set_state(show_key, False)
                                     chat_history.pop()
                                     set_state("chat_history", chat_history)
                                     set_state("regenerate_style", "more_detail")
                                     st.rerun()
                             with col_r3:
-                                if st.button(t("page2.regen_casual"), key=f"regen_c_{i}"):
+                                if st.button(t("page2.regen_casual"), key=f"regen_c_{i}", icon=":material/chat:"):
                                     set_state(show_key, False)
                                     chat_history.pop()
                                     set_state("chat_history", chat_history)
@@ -991,7 +996,7 @@ with right_col:
         # -- 操作栏 --
         if chat_history:
             c1, c2 = st.columns(2)
-            if c1.button(t("page2.clear_chat"), use_container_width=True):
+            if c1.button(t("page2.clear_chat"), use_container_width=True, icon=":material/delete_sweep:"):
                 set_state("chat_history", [])
                 cm.save_chat_history(current, [])
                 st.rerun()
@@ -1003,6 +1008,7 @@ with right_col:
                     file_name=f"{current}_qa.md",
                     mime="text/markdown",
                     use_container_width=True,
+                    icon=":material/save:",
                 )
 
         # -- 输入区（固定底部） --

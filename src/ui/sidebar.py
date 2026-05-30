@@ -64,6 +64,7 @@ def render_sidebar() -> None:
                         key=f"course_btn_{course}",
                         use_container_width=True,
                         type="secondary",
+                        icon=":material/school:",
                     ):
                         set_state("current_course", course)
                         reset_course_state()
@@ -78,7 +79,7 @@ def render_sidebar() -> None:
         # 新建课程
         # ============================================================
         new_course_label = f"+ {t('sidebar.new_course')}"
-        with st.expander(new_course_label, expanded=not courses):
+        with st.expander(new_course_label, expanded=not courses, icon=":material/add_circle:"):
             with st.form("create_course_form", clear_on_submit=True):
                 new_name = st.text_input(
                     t("sidebar.course_name"),
@@ -87,7 +88,8 @@ def render_sidebar() -> None:
                     label_visibility="collapsed",
                 )
                 if st.form_submit_button(
-                    t("sidebar.create_course"), type="primary", use_container_width=True
+                    t("sidebar.create_course"), type="primary", use_container_width=True,
+                    icon=":material/add:",
                 ):
                     if new_name.strip():
                         created = cm.create_course(new_name.strip())
@@ -104,7 +106,8 @@ def render_sidebar() -> None:
                     placeholder=t("sidebar.delete_course_placeholder"),
                 )
                 if delete_target and st.button(
-                    t("sidebar.confirm_delete"), use_container_width=True
+                    t("sidebar.confirm_delete"), use_container_width=True,
+                    icon=":material/delete_forever:",
                 ):
                     cm.delete_course(delete_target)
                     if current == delete_target:
@@ -146,6 +149,7 @@ def _render_current_course(cm, course: str) -> None:
                 key="nav_input",
                 use_container_width=True,
                 type="primary" if active == "input" else "secondary",
+                icon=":material/upload_file:",
             ):
                 set_state("active_section", "input")
                 st.switch_page(f"{_PAGE_PREFIX}1_资料录入.py")
@@ -155,6 +159,7 @@ def _render_current_course(cm, course: str) -> None:
                 key="nav_workspace",
                 use_container_width=True,
                 type="primary" if active == "workspace" else "secondary",
+                icon=":material/smart_toy:",
             ):
                 set_state("active_section", "workspace")
                 st.switch_page(f"{_PAGE_PREFIX}2_复习与问答.py")
