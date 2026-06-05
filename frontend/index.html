@@ -1,0 +1,26 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>课堂助手 - Lecture Assistant</title>
+
+<script>
+(function() {
+  var saved = localStorage.getItem('la-theme') || 'dark';
+  document.documentElement.setAttribute('data-theme', saved);
+})();
+</script>
+
+<link rel="stylesheet" href="/src/styles/base.css">
+</head>
+<body>
+
+<div id="app">
+  <nav id="nav"></nav>
+  <main id="main-content"></main>
+</div>
+
+<script type="module" src="/src/main.js"></script>
+</body>
+</html>

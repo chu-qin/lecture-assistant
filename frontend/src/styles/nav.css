@@ -1,0 +1,141 @@
+/* ============================================================
+   Top Navigation — 从 assets/review.html 提取
+   ============================================================ */
+.top-nav {
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 48px;
+  background: var(--bg-panel);
+  border-bottom: 1px solid var(--border);
+  display: flex;
+  align-items: center;
+  padding: 0 16px;
+  gap: 4px;
+  z-index: 200;
+  flex-shrink: 0;
+}
+
+.nav-brand {
+  font-size: 14px;
+  font-weight: 650;
+  color: var(--text-primary);
+  text-decoration: none;
+  white-space: nowrap;
+  margin-right: 4px;
+  letter-spacing: -0.01em;
+}
+
+.nav-brand:hover {
+  color: var(--accent);
+}
+
+.nav-course-select {
+  font-family: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+  background: transparent;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 8px;
+  margin-right: 4px;
+  max-width: 200px;
+  cursor: pointer;
+  outline: none;
+}
+
+.nav-course-select option {
+  background: var(--bg-surface);
+  color: var(--text-primary);
+}
+
+.nav-divider {
+  width: 1px;
+  height: 16px;
+  background: var(--border-strong);
+  margin: 0 8px;
+}
+
+.nav-tabs {
+  display: flex;
+  gap: 2px;
+  flex: 1;
+  overflow-x: auto;
+}
+
+.nav-tab {
+  height: 28px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 450;
+  color: var(--text-secondary);
+  background: transparent;
+  border: none;
+  cursor: pointer;
+  white-space: nowrap;
+  font-family: inherit;
+  transition: color 0.12s, background 0.12s;
+}
+
+.nav-tab:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.nav-tab.active {
+  color: var(--text-primary);
+  background: var(--bg-active);
+  font-weight: 500;
+}
+
+.nav-tab:disabled {
+  pointer-events: none;
+  opacity: 0.5;
+}
+
+.nav-actions {
+  margin-left: auto;
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.nav-btn {
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  background: transparent;
+  border: 1px solid transparent;
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.12s;
+  white-space: nowrap;
+}
+
+.nav-btn:hover {
+  color: var(--text-primary);
+  border-color: var(--border);
+  background: var(--bg-hover);
+}
+
+.nav-btn.primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+
+.nav-btn.primary:hover {
+  background: var(--accent-hover);
+}
+
+/* ============================================================
+   Responsive nav
+   ============================================================ */
+@media (max-width: 768px) {
+  .top-nav { flex-wrap: wrap; height: auto; padding: 6px 12px; gap: 4px; min-height: 48px; }
+  .nav-course-select { max-width: 150px; font-size: 12px; }
+  .nav-tab { font-size: 12px; padding: 0 10px; }
+}

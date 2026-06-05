@@ -1,0 +1,226 @@
+/* ============================================================
+   Materials page — sidebar file tree + stacked workflow cards
+   ============================================================ */
+
+/* ---- Layout ---- */
+.materials-layout {
+  display: flex;
+  height: calc(100vh - 48px);
+}
+
+.materials-sidebar {
+  width: 260px;
+  flex-shrink: 0;
+  overflow-y: auto;
+  border-right: 1px solid var(--border);
+  background: var(--bg-panel);
+  padding: 16px 0;
+}
+
+.materials-main {
+  flex: 1;
+  overflow-y: auto;
+  min-width: 0;
+  padding: 20px 32px 80px;
+}
+
+/* ---- Sidebar ---- */
+.sidebar-section {
+  padding: 0 12px;
+  margin-bottom: 4px;
+}
+
+.sidebar-section-header {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 8px 6px;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.sidebar-count {
+  font-size: 10px;
+  color: var(--text-muted);
+  background: var(--bg-hover);
+  padding: 1px 6px;
+  border-radius: 10px;
+  margin-left: auto;
+}
+
+.sidebar-file {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 5px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  transition: background 0.1s;
+}
+
+.sidebar-file:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.sidebar-file-name {
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.sidebar-file-actions {
+  display: flex;
+  gap: 2px;
+  opacity: 0;
+  transition: opacity 0.1s;
+}
+
+.sidebar-file:hover .sidebar-file-actions {
+  opacity: 1;
+}
+
+.sidebar-file .act-btn {
+  width: 24px;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border: none;
+  background: transparent;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: 4px;
+  font-size: 13px;
+}
+
+.sidebar-file .act-btn:hover {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+
+.sidebar-file .act-btn.danger:hover {
+  background: var(--danger-dim);
+  color: var(--danger);
+}
+
+.sidebar-empty {
+  padding: 2px 8px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+/* ---- Workflow Cards ---- */
+.workflow-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  overflow: hidden;
+}
+
+.workflow-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  cursor: default;
+  user-select: none;
+}
+
+.workflow-icon {
+  font-size: 16px;
+}
+
+.workflow-label {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.workflow-hint {
+  font-size: 11px;
+  color: var(--text-muted);
+  margin-left: 8px;
+}
+
+.workflow-toggle {
+  margin-left: auto;
+  width: 28px;
+  height: 28px;
+  border: none;
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background 0.1s;
+}
+
+.workflow-toggle:hover {
+  background: var(--bg-active);
+  color: var(--text-primary);
+}
+
+.workflow-body {
+  padding: 0 16px 16px;
+}
+
+.workflow-progress {
+  margin-top: 8px;
+}
+
+/* Correction compare */
+.correction-panel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 12px;
+  margin: 12px 0;
+}
+
+.correction-panel h4 {
+  font-size: 13px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  color: var(--text-primary);
+}
+
+.correction-panel .panel-content {
+  background: var(--bg-app);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 10px;
+  font-size: 12px;
+  line-height: 1.6;
+  max-height: 250px;
+  overflow-y: auto;
+  white-space: pre-wrap;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+  .materials-layout {
+    flex-direction: column;
+    height: auto;
+  }
+  .materials-sidebar {
+    width: 100%;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    max-height: 200px;
+  }
+  .materials-main {
+    padding: 16px;
+  }
+  .correction-panel {
+    grid-template-columns: 1fr;
+  }
+}

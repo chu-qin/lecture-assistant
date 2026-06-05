@@ -1,0 +1,335 @@
+/* ============================================================
+   Color System — 从 assets/review.html 提取，已生产验证
+   ============================================================ */
+:root {
+  --bg-app:        #0d0d0f;
+  --bg-panel:      #111114;
+  --bg-surface:    #18181c;
+  --bg-hover:      #1f1f24;
+  --bg-active:     #25252c;
+
+  --text-primary:  #ededef;
+  --text-secondary:#8b8b9a;
+  --text-muted:    #4a4a58;
+
+  --accent:        #7c6af7;
+  --accent-hover:  #9585f9;
+  --accent-dim:    rgba(124, 106, 247, 0.15);
+
+  --border:        rgba(255,255,255,0.07);
+  --border-strong: rgba(255,255,255,0.13);
+
+  --success:       #3dd68c;
+  --success-dim:   rgba(61, 214, 140, 0.12);
+  --warning:       #f5a623;
+  --danger:        #e5484d;
+  --danger-dim:    rgba(229, 72, 77, 0.12);
+}
+
+[data-theme="light"] {
+  --bg-app:        #f5f5f7;
+  --bg-panel:      #ffffff;
+  --bg-surface:    #ffffff;
+  --bg-hover:      #f0f0f3;
+  --bg-active:     #e8e8ed;
+
+  --text-primary:  #1a1a1f;
+  --text-secondary:#6b6b7a;
+  --text-muted:    #b0b0bc;
+
+  --accent:        #5b4de0;
+  --accent-hover:  #4a3ec8;
+  --accent-dim:    rgba(91, 77, 224, 0.1);
+
+  --border:        rgba(0,0,0,0.08);
+  --border-strong: rgba(0,0,0,0.15);
+
+  --success:       #1a9e5c;
+  --success-dim:   rgba(26, 158, 92, 0.1);
+  --warning:       #c47d0a;
+  --danger:        #dc2626;
+  --danger-dim:    rgba(220, 38, 38, 0.1);
+}
+
+/* ============================================================
+   Reset & Base
+   ============================================================ */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+html, body {
+  height: 100%;
+  margin: 0;
+  overflow: hidden;
+}
+
+body {
+  font-family: -apple-system, 'Inter', 'PingFang SC', 'Noto Sans SC', sans-serif;
+  font-size: 14px;
+  line-height: 1.6;
+  color: var(--text-primary);
+  background: var(--bg-app);
+  -webkit-font-smoothing: antialiased;
+}
+
+#app {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+}
+
+#main-content {
+  flex: 1;
+  overflow-y: auto;
+  min-width: 0;
+  padding-top: 48px;
+}
+
+/* ============================================================
+   Typography (scoped to .content-body)
+   ============================================================ */
+.content-body h1 {
+  font-size: 22px;
+  font-weight: 650;
+  letter-spacing: -0.02em;
+  margin: 0 0 20px;
+}
+
+.content-body h2 {
+  font-size: 18px;
+  font-weight: 600;
+  letter-spacing: -0.01em;
+  margin: 32px 0 12px;
+}
+
+.content-body h3 {
+  font-size: 15px;
+  font-weight: 600;
+  margin: 24px 0 8px;
+}
+
+.content-body p {
+  margin: 0 0 14px;
+  line-height: 1.75;
+}
+
+.content-body li {
+  line-height: 1.75;
+  margin-bottom: 4px;
+}
+
+.content-body code {
+  font-family: 'JetBrains Mono', 'Fira Code', monospace;
+  font-size: 12.5px;
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 1px 5px;
+}
+
+.content-body pre {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 16px;
+  overflow-x: auto;
+  margin: 12px 0 20px;
+}
+
+.content-body pre code {
+  background: none;
+  border: none;
+  padding: 0;
+}
+
+.content-body blockquote {
+  border-left: 3px solid var(--accent);
+  margin: 0.8em 0;
+  padding: 0.4em 1em;
+  background: var(--accent-dim);
+  border-radius: 0 6px 6px 0;
+}
+
+.content-body table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 0.8em 0;
+  font-size: 14px;
+}
+
+.content-body th, .content-body td {
+  border: 1px solid var(--border);
+  padding: 6px 12px;
+  text-align: left;
+}
+
+.content-body th {
+  background: var(--bg-hover);
+  font-weight: 600;
+}
+
+.content-body strong { font-weight: 600; }
+
+.content-body hr {
+  border: none;
+  border-top: 1px solid var(--border);
+  margin: 1.2em 0;
+}
+
+.content-body img {
+  max-width: 100%;
+  border-radius: 6px;
+}
+
+.content-body ul, .content-body ol {
+  padding-left: 1.5em;
+  margin: 0.5em 0;
+}
+
+/* ============================================================
+   Common: empty state
+   ============================================================ */
+.empty-state {
+  text-align: center;
+  color: var(--text-muted);
+  padding: 60px 20px;
+  font-size: 14px;
+}
+
+/* ============================================================
+   Common: buttons
+   ============================================================ */
+.btn {
+  height: 32px;
+  padding: 0 12px;
+  border-radius: 6px;
+  font-size: 13px;
+  font-weight: 450;
+  color: var(--text-secondary);
+  background: var(--bg-hover);
+  border: 1px solid var(--border);
+  cursor: pointer;
+  font-family: inherit;
+  transition: color 0.12s, background 0.12s, border-color 0.12s;
+  white-space: nowrap;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.btn:hover {
+  color: var(--text-primary);
+  background: var(--bg-active);
+  border-color: var(--border-strong);
+}
+
+.btn-primary {
+  background: var(--accent);
+  color: #fff;
+  border-color: transparent;
+}
+
+.btn-primary:hover {
+  background: var(--accent-hover);
+}
+
+.btn-danger {
+  color: var(--danger);
+}
+
+.btn-danger:hover {
+  background: var(--danger-dim);
+  border-color: var(--danger);
+  color: var(--danger);
+}
+
+.btn:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Button loading spinner */
+.btn-loading {
+  position: relative;
+  color: transparent !important;
+  pointer-events: none;
+}
+.btn-loading::after {
+  content: '';
+  position: absolute;
+  top: 50%; left: 50%;
+  width: 14px; height: 14px;
+  margin: -7px 0 0 -7px;
+  border: 2px solid transparent;
+  border-top-color: var(--text-secondary);
+  border-radius: 50%;
+  animation: btn-spin 0.6s linear infinite;
+}
+.btn-primary.btn-loading::after {
+  border-top-color: #fff;
+}
+@keyframes btn-spin {
+  to { transform: rotate(360deg); }
+}
+
+/* KaTeX formula error — theme-colored instead of default red */
+.katex-error {
+  color: var(--danger) !important;
+  border-bottom: 1px dashed var(--danger);
+}
+
+/* ============================================================
+   Scrollbar
+   ============================================================ */
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+
+::-webkit-scrollbar { width: 4px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: 2px;
+}
+::-webkit-scrollbar-thumb:hover { background: var(--text-muted); }
+
+/* ============================================================
+   Toast
+   ============================================================ */
+.toast-container {
+  position: fixed;
+  top: 56px;
+  right: 16px;
+  z-index: 400;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.toast {
+  padding: 10px 16px;
+  border-radius: 8px;
+  font-size: 13px;
+  color: #fff;
+  max-width: 360px;
+  animation: toastIn 0.25s ease-out;
+  box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+}
+
+.toast-success { background: var(--success); }
+.toast-error { background: var(--danger); }
+.toast-warning { background: var(--warning); color: #1a1a1f; }
+.toast-info { background: var(--accent); }
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateX(20px); }
+  to { opacity: 1; transform: translateX(0); }
+}
+
+/* ============================================================
+   Responsive
+   ============================================================ */
+@media (max-width: 768px) {
+  #main-content { padding-top: 56px; }
+}
+
+@media (max-width: 480px) {
+  body { font-size: 13px; }
+}

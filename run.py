@@ -121,7 +121,7 @@ with st.expander(t("app.about"), icon=":material/info:"):
 def _start_api():
     import uvicorn
 
-    from src.api.review_api import app as fastapi_app
+    from src.api.server import app as fastapi_app
 
     uvicorn.run(fastapi_app, host="0.0.0.0", port=8502, log_level="error")
 

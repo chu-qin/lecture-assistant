@@ -1,0 +1,214 @@
+/* ============================================================
+   Dashboard — course overview, hero, cards, create
+   ============================================================ */
+.home-page {
+  padding: 32px 48px 80px;
+  max-width: 960px;
+  margin: 0 auto;
+}
+
+/* ---- Course Hero (active course) ---- */
+.course-hero {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  background: var(--bg-surface);
+  border: 1px solid var(--accent);
+  border-radius: 12px;
+  margin-bottom: 24px;
+}
+
+.hero-info {
+  min-width: 0;
+}
+
+.hero-course-name {
+  font-size: 18px;
+  font-weight: 650;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  margin-bottom: 8px;
+}
+
+.hero-meta {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.hero-stat {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.hero-actions {
+  display: flex;
+  gap: 8px;
+  flex-shrink: 0;
+  margin-left: 16px;
+}
+
+/* ---- Course Grid ---- */
+.course-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 16px;
+  margin-bottom: 0;
+}
+
+.course-card {
+  background: var(--bg-surface);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 20px;
+  cursor: pointer;
+  transition: border-color 0.15s, box-shadow 0.15s, transform 0.1s;
+}
+
+.course-card:hover {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+  transform: translateY(-1px);
+}
+
+.course-card.active-course {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 2px var(--accent-dim);
+}
+
+.course-card-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.course-name {
+  font-size: 15px;
+  font-weight: 650;
+  color: var(--text-primary);
+  letter-spacing: -0.01em;
+  flex: 1;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.course-stats {
+  display: flex;
+  gap: 20px;
+  margin-bottom: 16px;
+}
+
+.stat {
+  display: flex;
+  align-items: baseline;
+  gap: 4px;
+}
+
+.stat-num {
+  font-size: 22px;
+  font-weight: 650;
+  color: var(--text-primary);
+  letter-spacing: -0.02em;
+}
+
+.stat-label {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.course-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+/* ---- Create Section ---- */
+.create-section {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  padding: 20px;
+  background: var(--bg-surface);
+  border: 1px dashed var(--border-strong);
+  border-radius: 10px;
+  margin-bottom: 24px;
+}
+
+.create-input {
+  flex: 1;
+  height: 36px;
+  padding: 0 12px;
+  background: var(--bg-app);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-family: inherit;
+  outline: none;
+  transition: border-color 0.12s;
+}
+
+.create-input:focus {
+  border-color: var(--accent);
+  box-shadow: 0 0 0 3px var(--accent-dim);
+}
+
+.create-input::placeholder {
+  color: var(--text-muted);
+}
+
+/* ---- Small button variant ---- */
+.btn-sm {
+  height: 28px;
+  padding: 0 10px;
+  font-size: 12px;
+  border-radius: 5px;
+}
+
+/* ---- Empty state ---- */
+.empty-icon {
+  font-size: 48px;
+  margin-bottom: 16px;
+}
+
+.empty-title {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 8px;
+}
+
+.empty-desc {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+/* Loading */
+.home-loading {
+  padding: 80px 20px;
+}
+
+/* ---- Responsive ---- */
+@media (max-width: 768px) {
+  .home-page { padding: 16px; }
+  .course-grid { grid-template-columns: 1fr; }
+  .course-hero {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
+  }
+  .hero-actions {
+    margin-left: 0;
+    width: 100%;
+  }
+  .hero-actions .hero-btn {
+    flex: 1;
+  }
+  .hero-meta {
+    gap: 12px;
+  }
+}

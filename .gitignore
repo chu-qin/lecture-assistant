@@ -46,6 +46,10 @@ MIGRATE_REVIEW_PAGE.md
 REDESIGN.md
 REVIEW_UI_DESIGN.md
 
+# Frontend (Vite/Node)
+node_modules/
+frontend/dist/
+
 # Temp files
 B
 C
