@@ -5,7 +5,7 @@ import './styles/home.css';
 import './styles/materials.css';
 import './styles/review.css';
 import { initTheme } from './components/theme.js';
-import { setLanguage } from './utils/i18n.js';
+import { setLanguage, t } from './utils/i18n.js';
 import { renderNav, updateNavTabs } from './components/nav.js';
 import { register, getCurrentRoute } from './router.js';
 import Store from './store.js';
@@ -35,7 +35,7 @@ async function init() {
   // Update theme toggle label
   const theme = document.documentElement.getAttribute('data-theme');
   const themeBtn = document.getElementById('themeToggle');
-  if (themeBtn) themeBtn.textContent = theme === 'dark' ? '浅色' : '深色';
+  if (themeBtn) themeBtn.textContent = theme === 'dark' ? t('nav.theme_light') : t('nav.theme_dark');
 }
 
 document.addEventListener('DOMContentLoaded', init);

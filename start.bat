@@ -15,7 +15,13 @@ if not exist ".env" (
     timeout /t 3 >nul
 )
 
-call ".venv\Scripts\activate.bat"
+:: Use .venv Python directly (avoids PATH conflicts with conda/system Python)
+set PYTHON=.venv\Scripts\python.exe
+if not exist "%PYTHON%" (
+    echo   [错误] 未找到虚拟环境，请先运行 setup_env.bat
+    pause
+    exit /b 1
+)
 
 :: Build frontend (always rebuild to pick up latest changes)
 echo   [构建] 正在构建前端...
@@ -31,6 +37,6 @@ echo   ========================================
 echo/
 start http://localhost:8502
 
-python -m uvicorn src.api.server:app --host 0.0.0.0 --port 8502 --log-level warning
+%PYTHON% -m uvicorn src.api.server:app --host 0.0.0.0 --port 8502 --log-level warning
 
 pause

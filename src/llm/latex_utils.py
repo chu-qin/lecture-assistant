@@ -30,6 +30,23 @@ def _fix_latex_commands(text: str) -> str:
         inner = re.sub(r"\\it\{([^}]*)\}", r"\\textit{\1}", inner)
         # Unsupported packages
         inner = re.sub(r"\\mathds\{([^}]*)\}", r"\\mathbb{\1}", inner)
+        # \bm (bold math, from bm package) → \boldsymbol
+        inner = re.sub(r"\\bm\{([^}]*)\}", r"\\boldsymbol{\1}", inner)
+        # \xlongequal{text} → \overset{\text{text}}{=}
+        inner = re.sub(
+            r"\\xlongequal\{([^}]*)\}", r"\\overset{\\text{\1}}{=}", inner
+        )
+        # \xlongequal (bare) → =
+        inner = re.sub(r"\\xlongequal\b", "=", inner)
+        # \coloneqq → \mathrel{:=} (KaTeX 0.17 should support, fallback)
+        inner = re.sub(r"\\coloneqq\b", r"\\mathrel{:=}", inner)
+        # \eqcolon → \mathrel{=:}
+        inner = re.sub(r"\\eqcolon\b", r"\\mathrel{=:}", inner)
+        # Remove \notag / \nonumber (only meaningful in LaTeX align environments)
+        inner = re.sub(r"\\notag\b", "", inner)
+        inner = re.sub(r"\\nonumber\b", "", inner)
+        # \intertext{...} → \text{...} (intertext only works in align)
+        inner = re.sub(r"\\intertext\{", r"\\text{", inner)
         return inner
 
     return _MATH_RE.sub(_fix, text)

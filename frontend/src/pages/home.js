@@ -2,10 +2,12 @@ import Store from '../store.js';
 import { get, post, del } from '../api.js';
 import { showToast } from '../components/toast.js';
 import { navigate } from '../router.js';
+import { t } from '../utils/i18n.js';
+import { escapeHtml } from '../utils/dom.js';
 
 export async function renderHomePage() {
   const main = document.getElementById('main-content');
-  main.innerHTML = '<div class="home-page"><div class="home-loading empty-state"><p>加载课程列表...</p></div></div>';
+  main.innerHTML = `<div class="home-page"><div class="home-loading empty-state"><p>${t('home.loading')}</p></div></div>`;
 
   let courses = [];
   try {
@@ -13,7 +15,7 @@ export async function renderHomePage() {
     courses = data.courses || [];
     Store.set('courses', courses);
   } catch (e) {
-    main.innerHTML = `<div class="home-page"><div class="empty-state"><p>加载失败: ${e.message}</p></div></div>`;
+    main.innerHTML = `<div class="home-page"><div class="empty-state"><p>${t('home.load_failed', {error: e.message})}</p></div></div>`;
     return;
   }
 
@@ -38,8 +40,8 @@ export async function renderHomePage() {
     empty.className = 'empty-state';
     empty.innerHTML = `
       <div class="empty-icon">📚</div>
-      <p class="empty-title">还没有课程</p>
-      <p class="empty-desc">创建你的第一门课程，开始上传资料、生成复习内容</p>
+      <p class="empty-title">${t('home.no_courses_title')}</p>
+      <p class="empty-desc">${t('home.no_courses_desc')}</p>
     `;
     page.appendChild(empty);
     main.appendChild(page);
@@ -59,21 +61,21 @@ function buildHero(course) {
   hero.className = 'course-hero';
 
   const kbClass = course.kb_ready ? 'ready' : 'off';
-  const kbText = course.kb_ready ? '知识库就绪' : '知识库未构建';
+  const kbText = course.kb_ready ? t('home.kb_ready') : t('home.kb_not_built');
 
   hero.innerHTML = `
     <div class="hero-info">
       <div class="hero-course-name">${escapeHtml(course.name)}</div>
       <div class="hero-meta">
         <span class="kb-badge ${kbClass}">${kbText}</span>
-        <span class="hero-stat">${course.transcripts || 0} 份转录</span>
-        <span class="hero-stat">${course.review_materials || 0} 份复习资料</span>
-        <span class="hero-stat">${course.audio_files || 0} 个音频</span>
+        <span class="hero-stat">${t('home.stats_transcripts', {n: course.transcripts || 0})}</span>
+        <span class="hero-stat">${t('home.stats_review', {n: course.review_materials || 0})}</span>
+        <span class="hero-stat">${t('home.stats_audio', {n: course.audio_files || 0})}</span>
       </div>
     </div>
     <div class="hero-actions">
-      <button class="btn btn-primary hero-btn" data-action="materials">上传资料</button>
-      <button class="btn hero-btn" data-action="review">进入复习</button>
+      <button class="btn btn-primary hero-btn" data-action="materials">${t('home.upload_materials')}</button>
+      <button class="btn hero-btn" data-action="review">${t('home.enter_review')}</button>
     </div>
   `;
 
@@ -96,7 +98,7 @@ function buildCourseCard(course, grid) {
   card.className = 'course-card';
 
   const kbClass = course.kb_ready ? 'ready' : 'off';
-  const kbText = course.kb_ready ? '知识库就绪' : '未构建';
+  const kbText = course.kb_ready ? t('home.kb_ready') : t('home.not_built_short');
   const isActive = Store.get('currentCourse') === course.name;
 
   card.innerHTML = `
@@ -110,8 +112,8 @@ function buildCourseCard(course, grid) {
       <div class="stat"><span class="stat-num">${course.audio_files || 0}</span><span class="stat-label">音频</span></div>
     </div>
     <div class="course-actions">
-      <button class="btn btn-primary btn-sm" data-action="enter">进入课程</button>
-      <button class="btn btn-sm" data-action="delete" title="删除课程">删除</button>
+      <button class="btn btn-primary btn-sm" data-action="enter">${t('home.enter_course')}</button>
+      <button class="btn btn-sm" data-action="delete" title="${t('home.delete')}">${t('home.delete')}</button>
     </div>
   `;
 
@@ -141,16 +143,16 @@ function buildCreateSection(onSuccess) {
   const input = document.createElement('input');
   input.type = 'text';
   input.className = 'create-input';
-  input.placeholder = '输入新课程名称...';
+  input.placeholder = t('home.create_placeholder');
   input.maxLength = 50;
 
   const btn = document.createElement('button');
   btn.className = 'btn btn-primary';
-  btn.textContent = '创建课程';
+  btn.textContent = t('home.create_btn');
   btn.onclick = async () => {
     const name = input.value.trim();
     if (!name) {
-      showToast('请输入课程名称', 'warning');
+      showToast(t('home.name_required'), 'warning');
       return;
     }
     btn.disabled = true;
@@ -158,10 +160,10 @@ function buildCreateSection(onSuccess) {
     try {
       await post('/courses', { name });
       input.value = '';
-      showToast(`课程 "${name}" 已创建`, 'success');
+      showToast(t('home.created', {name}), 'success');
       onSuccess();
     } catch (e) {
-      showToast(`创建失败: ${e.message}`, 'error');
+      showToast(t('home.create_failed', {error: e.message}), 'error');
     }
     btn.disabled = false;
     btn.classList.remove('btn-loading');
@@ -188,22 +190,16 @@ function enterCourse(name) {
 }
 
 async function deleteCourse(name) {
-  if (!confirm(`确定要删除课程 "${name}" 吗？此操作不可撤销。`)) return;
+  if (!confirm(t('home.delete_confirm', {name}))) return;
   try {
     await del(`/courses/${encodeURIComponent(name)}`);
-    showToast(`课程 "${name}" 已删除`, 'success');
+    showToast(t('home.deleted', {name}), 'success');
     if (Store.get('currentCourse') === name) {
       Store.set('currentCourse', '');
       localStorage.removeItem('la-current-course');
     }
     await renderHomePage();
   } catch (e) {
-    showToast(`删除失败: ${e.message}`, 'error');
+    showToast(t('home.delete_failed', {error: e.message}), 'error');
   }
-}
-
-function escapeHtml(s) {
-  const div = document.createElement('div');
-  div.textContent = s;
-  return div.innerHTML;
 }

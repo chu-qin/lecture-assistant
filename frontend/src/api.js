@@ -56,11 +56,12 @@ export function uploadWithProgress(path, formData, onProgress) {
   });
 }
 
-export async function* sseStream(path, body = {}) {
+export async function* sseStream(path, body = {}, signal = null) {
   const res = await fetch(API_BASE + path, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(body || {}),
+    signal,
   });
   if (!res.ok) {
     const err = await res.json().catch(() => ({ detail: `HTTP ${res.status}` }));

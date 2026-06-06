@@ -161,18 +161,6 @@
   color: var(--text-muted);
 }
 
-/* Streaming cursor */
-.streaming-cursor::after {
-  content: '|';
-  animation: blink 0.9s infinite;
-  color: var(--accent);
-  font-weight: 300;
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50%       { opacity: 0; }
-}
 
 /* ---- Chat Panel ---- */
 .review-chat {

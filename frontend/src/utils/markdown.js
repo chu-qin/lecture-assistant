@@ -1,11 +1,35 @@
 import { marked } from 'marked';
 import mermaid from 'mermaid';
 
-// KaTeX auto-render — separate entry point
-let renderMathInElement = null;
-import('katex/dist/contrib/auto-render.js').then(m => {
-  renderMathInElement = m.default || m.renderMathInElement;
-});
+// ============================================================
+// MathJax 3 configuration (must be set BEFORE the es5 bundle loads)
+// ============================================================
+window.MathJax = {
+  tex: {
+    inlineMath: [['$', '$']],
+    displayMath: [['$$', '$$']],
+    // MathJax automatically handles: \bm, \boldsymbol, \coloneqq, \stackrel,
+    // \begin{aligned}, \operatorname, \mathbb, \mathcal, \text, etc.
+    // The full bundle includes: ams, boldsymbol, cancel, cases, color, colortbl,
+    // configmacros, empheq, enclose, extpfeil, gensymb, html, mathtools, mhchem,
+    // newcommand, noundefined, tagformat, textcomp, textmacros, unicode, upgreek, verb
+  },
+  startup: {
+    typeset: false,  // We control when to render
+  },
+  options: {
+    enableMenu: false,
+    ignoreHtmlClass: 'mathjax-ignore',
+  },
+};
+
+let _mathjaxReady = false;
+async function _ensureMathJax() {
+  if (_mathjaxReady) return;
+  // The es5 bundle reads window.MathJax config on load
+  await import('mathjax/es5/tex-chtml-full.js');
+  _mathjaxReady = true;
+}
 
 marked.setOptions({
   breaks: false,
@@ -46,7 +70,6 @@ function scanMathDelimiters(text) {
       let found = false;
       while (j < n) {
         if (text[j] === '$') {
-          // Check if it's a $$ block opener
           if (j + 1 < n && text.substring(j, j + 2) === '$$') {
             const closer2 = text.indexOf('$$', j + 2);
             if (closer2 !== -1) {
@@ -79,25 +102,25 @@ function scanMathDelimiters(text) {
   return result.join('');
 }
 
+// Pre-processing fixes for LLM-generated LaTeX that even MathJax might struggle with.
+// MathJax handles \bm, \coloneqq, \stackrel, \begin{aligned}, etc. natively.
+// This fixes the edge cases: \d (differential vs underdot), \intertext, etc.
 function fixLatexCommands(text) {
-  // Replace known-problematic LaTeX commands only inside math regions
   const MATH_RE = /\$\$([\s\S]*?)\$\$|\$([^$\n]+?)\$/g;
   return text.replace(MATH_RE, (match) => {
     let inner = match;
-    // Dotless i/j — text-mode only, invalid in KaTeX math mode
-    inner = inner.replace(/\\i\b/g, 'i');
-    inner = inner.replace(/\\j\b/g, 'j');
-    // Differential d — LLM often writes \d{x} or \d
+    // Differential d — LLM writes \d{x} for differential, but \d is underdot in LaTeX.
+    // MathJax would interpret \d{x} as "dot-under x". Fix before rendering.
     inner = inner.replace(/\\d\{([^}]*)\}/g, '\\mathrm{d}$1');
     inner = inner.replace(/\\d\b/g, '\\mathrm{d}');
     // Degree symbol
     inner = inner.replace(/\\degree\b/g, '^{\\circ}');
-    // Old-style font commands → modern equivalents
-    inner = inner.replace(/\\rm\{([^}]*)\}/g, '\\mathrm{$1}');
-    inner = inner.replace(/\\bf\{([^}]*)\}/g, '\\mathbf{$1}');
-    inner = inner.replace(/\\it\{([^}]*)\}/g, '\\textit{$1}');
-    // Unsupported packages
-    inner = inner.replace(/\\mathds\{([^}]*)\}/g, '\\mathbb{$1}');
+    // MathJax handles \bm, \coloneqq, \stackrel natively — no fix needed
+    // Remove \notag / \nonumber (only meaningful in LaTeX align environments)
+    inner = inner.replace(/\\notag\b/g, '');
+    inner = inner.replace(/\\nonumber\b/g, '');
+    // \intertext{...} → \text{...} (intertext only works in align)
+    inner = inner.replace(/\\intertext\{/g, '\\text{');
     return inner;
   });
 }
@@ -156,7 +179,7 @@ export function renderContent(md) {
   return html;
 }
 
-// Lightweight render for streaming/chat — only fixes LaTeX commands, no delimiter scanning
+// Lightweight render for streaming/chat — does NOT invoke MathJax (too slow for streaming)
 export function renderInline(md) {
   try {
     return marked.parse(fixLatexCommands(md));
@@ -171,27 +194,19 @@ function escapeHtmlLight(s) {
   return div.innerHTML;
 }
 
+// ============================================================
+// Math rendering — uses MathJax 3 (handles \bm, \coloneqq,
+// \stackrel, \begin{aligned}, and almost all LLM-generated LaTeX)
+// ============================================================
+
 export async function renderMath(container) {
-  if (!renderMathInElement) {
-    // Wait for KaTeX auto-render to load
-    try {
-      const m = await import('katex/dist/contrib/auto-render.js');
-      renderMathInElement = m.default || m.renderMathInElement;
-    } catch (e) {
-      console.warn('KaTeX auto-render not available:', e);
-      return;
-    }
-  }
   try {
-    renderMathInElement(container, {
-      delimiters: [
-        { left: '$$', right: '$$', display: true },
-        { left: '$', right: '$', display: false },
-      ],
-      throwOnError: false,
-    });
+    await _ensureMathJax();
+    if (window.MathJax && window.MathJax.typesetPromise) {
+      await window.MathJax.typesetPromise([container]);
+    }
   } catch (e) {
-    console.warn('KaTeX render error:', e);
+    console.warn('MathJax render error:', e);
   }
 }
 

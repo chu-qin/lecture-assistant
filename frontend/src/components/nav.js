@@ -1,5 +1,5 @@
 import Store from '../store.js';
-import { setLanguage } from '../utils/i18n.js';
+import { setLanguage, t } from '../utils/i18n.js';
 import { navigate } from '../router.js';
 import { toggleTheme as doToggleTheme, getCurrentTheme } from './theme.js';
 import { get as apiGet } from '../api.js';
@@ -13,7 +13,7 @@ export async function renderNav() {
   const brand = document.createElement('a');
   brand.href = '#home';
   brand.className = 'nav-brand';
-  brand.textContent = '课堂助手';
+  brand.textContent = t('nav.brand');
   nav.appendChild(brand);
 
   // Course selector
@@ -30,7 +30,7 @@ export async function renderNav() {
 
   const defaultOpt = document.createElement('option');
   defaultOpt.value = '';
-  defaultOpt.textContent = '选择课程...';
+  defaultOpt.textContent = t('nav.select_course');
   courseSelect.appendChild(defaultOpt);
   nav.appendChild(courseSelect);
 
@@ -54,19 +54,19 @@ export async function renderNav() {
   themeBtn.className = 'nav-btn';
   themeBtn.onclick = () => {
     doToggleTheme();
-    themeBtn.textContent = getCurrentTheme() === 'dark' ? '浅色' : '深色';
+    themeBtn.textContent = getCurrentTheme() === 'dark' ? t('nav.theme_light') : t('nav.theme_dark');
   };
-  themeBtn.textContent = getCurrentTheme() === 'dark' ? '浅色' : '深色';
+  themeBtn.textContent = getCurrentTheme() === 'dark' ? t('nav.theme_light') : t('nav.theme_dark');
   actions.appendChild(themeBtn);
 
   const langBtn = document.createElement('button');
   langBtn.className = 'nav-btn';
-  langBtn.textContent = Store.get('language') === 'zh' ? 'EN' : '中';
+  langBtn.textContent = Store.get('language') === 'zh' ? t('nav.lang_en') : t('nav.lang_zh');
   langBtn.onclick = async () => {
     const next = Store.get('language') === 'zh' ? 'en' : 'zh';
     await setLanguage(next);
     Store.set('language', next);
-    langBtn.textContent = next === 'zh' ? 'EN' : '中';
+    langBtn.textContent = next === 'zh' ? t('nav.lang_en') : t('nav.lang_zh');
     window.dispatchEvent(new Event('hashchange'));
   };
   actions.appendChild(langBtn);
@@ -92,9 +92,9 @@ export function updateNavTabs(active) {
   if (!container) return;
 
   const tabs = [
-    { hash: 'home', label: '课程' },
-    { hash: 'materials', label: '资料录入' },
-    { hash: 'review', label: '复习问答' },
+    { hash: 'home', label: t('nav.tab_courses') },
+    { hash: 'materials', label: t('nav.tab_materials') },
+    { hash: 'review', label: t('nav.tab_review') },
   ];
 
   container.innerHTML = '';

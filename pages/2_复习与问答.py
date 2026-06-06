@@ -20,8 +20,14 @@ from src.ui.session_state import get_state, init_session_state, set_state  # noq
 from src.ui.sidebar import render_sidebar  # noqa: E402
 from src.ui.theme import inject_mermaid, inject_workspace_layout  # noqa: E402
 
+# Phase 1 fix: import shared LaTeX/prompt/split utilities instead of inline copies
+from src.llm.latex_utils import normalize_latex as _normalize_latex_shared  # noqa: E402
+from src.llm.prompts import build_type_sections as _build_type_sections_shared  # noqa: E402
+from src.llm.prompts import build_generation_prompt as _build_generation_prompt_shared  # noqa: E402
+from src.llm.section_split import split_by_sections as _split_by_sections_shared  # noqa: E402
+
 # ====================================================================
-# 辅助函数（必须在页面逻辑之前定义）
+# 辅助函数（委托到 src/llm/ 共享模块）
 # ====================================================================
 
 
@@ -40,89 +46,14 @@ def _material_type_short(material_type: str) -> str:
 
 
 def _normalize_latex(content: str) -> str:
-    """标准化 LaTeX 分隔符，未配对的 $ 转义为 \\$ 避免 KaTeX 报错。
-
-    采用字符级扫描器：正确配对的 $...$ / $$...$$ 保留为数学公式，
-    配对失败的孤立 $ 转义为文本，从而防止 KaTeX 将后续中文当作数学模式解析。
-    """
-    import re
-
-    # Step 1: 将 \( ... \) / \[ ... \] 统一为 $...$ / $$...$$
-    content = re.sub(r"\\\(\s*", "$", content)
-    content = re.sub(r"\s*\\\)", "$", content)
-    content = re.sub(r"\\\[\s*", "$$", content)
-    content = re.sub(r"\s*\\\]", "$$", content)
-
-    # Step 2: 修复中文紧贴 $ 的问题
-    content = re.sub(r"([一-鿿　-〿＀-￯])\$", r"\1 $", content)
-    content = re.sub(r"\$([一-鿿　-〿＀-￯])", r"$ \1", content)
-
-    # Step 3: 字符级扫描 — 配对 $ / $$，转义孤立 $
-    return _scan_math_delimiters(content)
+    """标准化 LaTeX 分隔符（委托到 src/llm/latex_utils.py）。"""
+    return _normalize_latex_shared(content)
 
 
 def _scan_math_delimiters(text: str) -> str:
-    """逐字符扫描：匹配 $...$ 和 $$...$$，剥离内部 HTML，转义未闭合的 $。
-
-    规则：
-    - $$ 优先匹配（显示数学），找到最近的闭合 $$ → 保留为 $$...$$
-    - 单个 $ 匹配最近的单个 $（跳过中间的 $$ 块）→ 保留为 $...$
-    - 找不到闭合的 $ / $$ → 转义为 \\$ 或 \\$\\$，KaTeX 不作数学处理
-    - 数学块内部的 HTML 标签会被剥离
-    """
-    import re
-
-    _html_re = re.compile(r"<[^>]+>")
-
-    result: list[str] = []
-    i = 0
-    n = len(text)
-
-    while i < n:
-        # ---- 显示数学 $$...$$ ----
-        if i + 1 < n and text[i : i + 2] == "$$":
-            closer = text.find("$$", i + 2)
-            if closer != -1:
-                inner = _html_re.sub("", text[i + 2 : closer])
-                result.append("$$" + inner + "$$")
-                i = closer + 2
-            else:
-                result.append("\\$\\$")
-                i += 2
-            continue
-
-        # ---- 行内数学 $...$ ----
-        if text[i] == "$":
-            j = i + 1
-            found = False
-            while j < n:
-                if text[j] == "$":
-                    # 如果这个 $ 是 $$ 的起始，跳过整个 $$ 块继续搜索
-                    if j + 1 < n and text[j : j + 2] == "$$":
-                        closer2 = text.find("$$", j + 2)
-                        if closer2 != -1:
-                            j = closer2 + 2
-                        else:
-                            j += 2
-                        continue
-                    # 找到匹配的单个 $
-                    inner = _html_re.sub("", text[i + 1 : j])
-                    result.append("$" + inner + "$")
-                    i = j + 1
-                    found = True
-                    break
-                j += 1
-
-            if not found:
-                result.append("\\$")
-                i += 1
-            continue
-
-        # ---- 普通文本 ----
-        result.append(text[i])
-        i += 1
-
-    return "".join(result)
+    """字符级 $ 扫描器（委托到共享模块）。"""
+    from src.llm.latex_utils import _scan_math_delimiters as _scanner
+    return _scanner(text)
 
 
 def _render_markdown(content: str) -> None:
@@ -131,179 +62,24 @@ def _render_markdown(content: str) -> None:
 
 
 def _build_type_sections(generate_types: list[str]) -> list[str]:
-    """构建各类型的 prompt 片段（始终中文，发送给 LLM）。"""
-    sections = []
-
-    for gt in generate_types:
-        if "复习提纲" in gt:
-            sections.append("""
-## 一、复习提纲
-
-请为课程的每个章节生成详细的复习提纲，包括：
-- **章节主题**：用一句话概括本章核心内容
-- **核心概念清单**：列出本章所有重要概念，每个给出完整定义
-- **重点标注**：用 ★ 标注重点（1-3 颗星表示重要程度），并说明为什么重要
-- **难点标注**：用 ★★ 标注难点，详细解释难在哪里、如何理解
-- **关键公式与定理**：完整列出（LaTeX 格式），附每个符号的含义、使用条件与前提假设、典型应用场景
-- **常见误区**：本章学生最容易犯的 3-5 个错误
-- **记忆技巧**：帮助记忆的口诀、类比或理解框架""")
-        elif "详细笔记" in gt:
-            sections.append("""
-## 二、详细笔记（核心部分 —— 请务必极度详尽）
-
-这是最重要的部分。请以「逐章逐节逐知识点」的方式，生成一份完整、详尽的课堂笔记。宁可过长也不要省略任何内容。
-
-### 每章结构：
-1. **章节导言**（3-5 句）：本章要解决什么问题？在学科中的位置是什么？
-2. **知识点逐一详解**：按小节顺序，每个知识点包含：
-   - **定义**：完整、严谨的定义
-   - **背景与动机**：这个概念/定理是为了解决什么问题而提出的？
-   - **详细解释**：用通俗语言和具体例子阐述
-   - **公式推导**：所有公式给出完整推导过程或证明思路（LaTeX 格式）
-   - **几何/物理意义**（如适用）
-   - **使用条件**：什么情况下适用，什么情况下不适用
-   - **典型例题**：至少 1 道例题，展示完整解题步骤
-   - **易错点**：学生最容易出错的地方
-3. **章节总结**：用要点形式归纳本章核心内容
-4. **课后思考**：1-2 个值得深入思考的问题
-
-### 格式要求：
-- 使用 Markdown 层级标题（## 章、### 节、#### 知识点）
-- 所有数学公式严格使用 LaTeX
-- 关键术语首次出现时加粗
-- 重要结论用 **加粗** 突出""")
-        elif "知识结构图" in gt:
-            sections.append("""
-## 三、知识结构图
-
-用层级列表和关系标注展示完整的知识体系：
-
-- **第一层：学科分支** — 课程涵盖哪几个大的主题领域
-- **第二层：章节脉络** — 每个主题下包含哪些章节，章节之间是什么关系（递进 → / 并列 ↔ / 依赖 →）
-- **第三层：知识点网络** — 每章内的知识点及其关联：
-  - 标注知识点的前置依赖（学习 B 之前需要先掌握 A）
-  - 标注跨章节的知识关联
-- **核心节点**用 **加粗** 突出
-- 用 →（推导/递进）、←（反向引用）、↔（等价/关联）标注关系""")
-        elif "自测题库" in gt:
-            sections.append("""
-## 四、自测题库
-
-**重要：直接生成题目，不要先输出知识点回顾、章节复习、概念梳理等内容。开门见山，从第一道题开始。每道题在解析中简要说明所考查的知识点即可。**
-
-生成高质量的练习题，覆盖全部重点和难点，题目数量以覆盖所有重要知识点为准：
-
-### 单选题
-- 覆盖所有重要知识点，数量不限
-- 每道 4 个选项，标注正确答案
-- 每个错误选项应该代表一种典型误解（并说明为什么错）
-- 每题附详细解析
-
-### 填空题
-- 覆盖关键公式、定义中的关键词汇，数量不限
-- 附完整答案解析
-
-### 简答题
-- 覆盖概念理解、定理陈述、方法比较，数量不限
-- 附参考答案要点（列出得分点）
-
-### 计算/证明题
-- 覆盖重点计算方法，数量不限
-- 附完整解题步骤和评分标准""")
-
-    return sections
+    """构建各类型的 prompt 片段（委托到 src/llm/prompts.py）。"""
+    return _build_type_sections_shared(generate_types)
 
 
-# 中文数字 → 资料类型映射（用于拆分 LLM 输出）
-_CN_SECTION_MAP = {"一": "复习提纲", "二": "详细笔记", "三": "知识结构图", "四": "自测题库"}
-_CN_NUMS = "一二三四五六七八九十"
+# 中文数字 → 资料类型映射（委托到 src/llm/section_split.py）
+from src.llm.section_split import _CN_SECTION_MAP, _CN_NUMS  # noqa: E402
 
 
 def _split_by_sections(full_output: str, generate_types: list[str]) -> list[tuple[str, str]]:
-    """按 ## N、section 标题拆分 LLM 输出，返回 [(type_name, content), ...]。
-
-    只保留 generate_types 中已勾选的类型，按原始顺序返回。
-    """
-    import re
-
-    pattern = r"\n(?=## [" + _CN_NUMS + r"]、)"
-    raw_parts = re.split(pattern, full_output)
-
-    result: list[tuple[str, str]] = []
-    seen_types: set[str] = set()
-    for part in raw_parts:
-        part = part.strip()
-        if not part:
-            continue
-        m = re.match(r"## ([" + _CN_NUMS + r"])、", part)
-        if not m:
-            if result:
-                name, content = result[0]
-                result[0] = (name, content + "\n\n" + part)
-            continue
-        cn = m.group(1)
-        type_name = _CN_SECTION_MAP.get(cn)
-        # 去重：同名章节只保留第一次出现
-        if (
-            type_name
-            and type_name not in seen_types
-            and any(type_name in gt for gt in generate_types)
-        ):
-            seen_types.add(type_name)
-            result.append((type_name, part))
-
-    return result
+    """按 ## N、section 标题拆分 LLM 输出（委托到 src/llm/section_split.py）。"""
+    return _split_by_sections_shared(full_output, generate_types)
 
 
 def _build_generation_prompt(
     merged_content: str, generate_types: list[str], custom_extra: str
 ) -> str:
-    """根据合并内容和类型选择构建生成提示词（始终中文，发送给 LLM）。"""
-    type_sections = _build_type_sections(generate_types)
-    sections_text = "\n".join(type_sections)
-
-    is_quiz_only = len(generate_types) == 1 and "自测题库" in generate_types[0]
-
-    if is_quiz_only:
-        task_desc = (
-            "请根据以下课堂内容，生成一套高质量的自测题库。"
-            "**注意：直接出题，不要先输出知识点回顾、复习提纲、概念梳理等前置内容。**"
-        )
-        global_reqs = """## 全局要求
-- 使用 Markdown 排版，标题层级清晰（##、###、####）
-- 所有数学公式使用 LaTeX（行内 $...$，独立公式 $$...$$）
-- 开门见山，直接从题目开始，不要输出复习性内容
-- 每道题附详细解析，解析中可简要提及所考查的知识点
-- 题目难度应有梯度，覆盖基础概念到综合应用"""
-    else:
-        task_desc = "你是一位复习资料整理专家。请根据以下课堂内容，生成完整的复习材料。"
-        global_reqs = """## 全局要求
-- 使用 Markdown 排版，标题层级清晰（##、###、####）
-- 所有数学公式使用 LaTeX（行内 $...$，独立公式 $$...$$）
-- 关键术语首次出现时加粗
-- 内容务必详尽完整，不要为了简短而省略任何知识点
-- 不要使用「详见教材」「此处省略」等跳过性表述
-- 即使课程材料对某些内容提及较少，也请基于你的专业知识补充完善，并标注「补充」
-- 不要以教师口吻进行自我介绍（如"同学们好，我是XX老师"），直接输出复习材料内容
-- 每个章节结束后直接进入下一章节，"
-        "不要在章节末尾添加祝福语、鼓励语或总结语"
-        "（如"祝考试顺利""希望这份资料有帮助"等）"""
-
-    return f"""{task_desc}
-
-## 课程内容
-
-{merged_content}
-
-## 输出要求
-
-请按以下结构输出（Markdown 格式，适合打印和屏幕阅读）：
-{sections_text}
-
-{f"## 五、附加要求\n{custom_extra}" if custom_extra else ""}
-
-{global_reqs}
-"""
+    """根据合并内容和类型选择构建生成提示词（委托到 src/llm/prompts.py）。"""
+    return _build_generation_prompt_shared(merged_content, generate_types, custom_extra)
 
 
 def _run_generation(

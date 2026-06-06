@@ -3,7 +3,8 @@ chcp 65001 >nul
 title 课堂助手 [开发模式]
 cd /d "%~dp0"
 
-call ".venv\Scripts\activate.bat"
+set PYTHON=.venv\Scripts\python.exe
+
 cd frontend
 
 echo   [开发模式]
@@ -13,7 +14,7 @@ echo/
 
 start http://localhost:5173
 
-start "API Server" cmd /c "cd /d %~dp0 && .venv\Scripts\activate.bat && python -m uvicorn src.api.server:app --host 0.0.0.0 --port 8502 --log-level info"
+start "API Server" cmd /c "cd /d %~dp0 && %PYTHON% -m uvicorn src.api.server:app --host 0.0.0.0 --port 8502 --log-level info"
 
 npm run dev
 

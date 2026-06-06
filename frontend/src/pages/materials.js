@@ -1,6 +1,7 @@
 import Store from '../store.js';
 import { get, del, sseUploadWithProgress } from '../api.js';
 import { showToast } from '../components/toast.js';
+import { escapeHtml } from '../utils/dom.js';
 
 // Per-workflow state
 const workflows = {
@@ -220,24 +221,37 @@ async function runWorkflow(key, endpoint, onEvent, extraFormData) {
     w.files.forEach(f => fd.append('files', f));
   }
 
+  let uploadDone = false;
+
   try {
     await sseUploadWithProgress(
       `/courses/${encodeURIComponent(course)}/${endpoint}`,
       fd,
       (evt) => {
+        if (!uploadDone) { uploadDone = true; }
         if (evt.type === 'status') {
           progressEl.innerHTML = `<div class="progress-status">${escapeHtml(evt.message)}</div>`;
         } else if (evt.type === 'done') {
           showToast('操作完成', 'success');
           loadSidebar();
         } else if (evt.type === 'error') {
-          showToast(`操作失败: ${evt.message}`, 'error');
+          // Per-file errors (have a 'file' field) show inline, not as toast
+          if (evt.file && onEvent) {
+            onEvent(evt, progressEl);
+          } else {
+            // Fatal/global errors show as toast
+            showToast(`操作失败: ${evt.message}`, 'error');
+          }
         } else {
           onEvent(evt, progressEl);
         }
       },
       (pct) => {
-        progressEl.innerHTML = `<div class="progress-status">正在上传... ${pct}%</div>`;
+        if (pct >= 100 && !uploadDone) {
+          progressEl.innerHTML = '<div class="progress-status">上传完成，等待服务器处理...</div>';
+        } else if (!uploadDone) {
+          progressEl.innerHTML = `<div class="progress-status">正在上传... ${pct}%</div>`;
+        }
       }
     );
   } catch (e) {
@@ -382,13 +396,6 @@ function renderFileList(id, files, onChange) {
 // ============================================================
 // Utils
 // ============================================================
-function escapeHtml(s) {
-  if (!s) return '';
-  const div = document.createElement('div');
-  div.textContent = s;
-  return div.innerHTML;
-}
-
 function formatSize(bytes) {
   if (!bytes) return '0 B';
   if (bytes < 1024) return bytes + ' B';

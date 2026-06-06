@@ -12,6 +12,8 @@ let chatHistory = [];
 let materialList = [];
 let kbReady = false;
 let isGenerating = false;
+let activeStreamController = null;
+let isSending = false;
 
 const TYPE_MAP = {
   '复习提纲': { key: 'outline', short: '提纲', icon: '📋' },
@@ -261,14 +263,17 @@ function renderSidebar() {
 }
 
 async function downloadMaterial(item) {
-  window.open(`/api/courses/${encodeURIComponent(Store.get('currentCourse'))}/materials/${encodeURIComponent(item.display_name)}/download`, '_blank');
+  const name = item.filename || item.display_name;
+  window.open(`/api/courses/${encodeURIComponent(Store.get('currentCourse'))}/materials/${encodeURIComponent(name)}/download`, '_blank');
 }
 
 async function deleteMaterial(item) {
   const course = Store.get('currentCourse');
   if (!confirm(`确定要删除 "${item.display_name}" 吗？`)) return;
   try {
-    await del(`/courses/${encodeURIComponent(course)}/materials/${encodeURIComponent(item.display_name)}`);
+    // Use item.filename (actual file on disk), not display_name
+    const name = item.filename || item.display_name;
+    await del(`/courses/${encodeURIComponent(course)}/materials/${encodeURIComponent(name)}`);
     showToast(`"${item.display_name}" 已删除`, 'success');
     await loadReviewData();
   } catch (e) {
@@ -321,14 +326,26 @@ function renderCurrentMaterial() {
 
 async function loadMaterialContent(mat) {
   try {
-    if (mat.content) {
+    let content = mat.content;
+    if (!content) {
+      const course = Store.get('currentCourse');
+      const resp = await fetch(`/api/courses/${encodeURIComponent(course)}/materials/${encodeURIComponent(mat.display_name)}/download`);
+      if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+      content = await resp.text();
+      mat.content = content;
       tabMaterials[currentTab] = mat;
-      const body = document.getElementById('reviewBody');
-      renderMarkdown(mat.content, body, Store.get('currentCourse'), mat.display_name);
+    } else {
+      tabMaterials[currentTab] = mat;
+    }
+    const body = document.getElementById('reviewBody');
+    if (body) {
+      renderMarkdown(content, body, Store.get('currentCourse'), mat.display_name);
     }
   } catch (e) {
-    document.getElementById('reviewBody').innerHTML =
-      `<div class="empty-state"><p>加载失败: ${escapeHtml(e.message)}</p></div>`;
+    const body = document.getElementById('reviewBody');
+    if (body) {
+      body.innerHTML = `<div class="empty-state"><p>加载失败: ${escapeHtml(e.message)}</p></div>`;
+    }
   }
 }
 
@@ -393,12 +410,18 @@ async function startGenerate() {
   }
 
   try {
+    // Abort any existing stream
+    if (activeStreamController) activeStreamController.abort();
+    const controller = new AbortController();
+    activeStreamController = controller;
+
     let streamContent = '';
     let lastKatexTime = 0;
 
     for await (const evt of sseStream(
       `/courses/${encodeURIComponent(course)}/generate`,
-      { material_types: materialTypes, custom_extra: customExtra }
+      { material_types: materialTypes, custom_extra: customExtra },
+      controller.signal
     )) {
       if (evt.type === 'chunk') {
         streamContent += evt.content;
@@ -427,11 +450,13 @@ async function startGenerate() {
     }
     renderMathAndMermaid(body);
   } catch (e) {
+    if (e.name === 'AbortError') return;
     body.innerHTML = `<div style="color:#e5484d;">生成失败: ${escapeHtml(e.message)}</div>`;
     showToast(`生成失败: ${e.message}`, 'error');
   }
 
   isGenerating = false;
+  activeStreamController = null;
   document.getElementById('genProgress').textContent = '';
 }
 
@@ -491,10 +516,15 @@ async function sendMessage() {
     showToast('请先构建知识库', 'warning');
     return;
   }
+  if (isSending) return;
+  isSending = true;
+
+  // Abort any existing chat stream
+  if (activeStreamController) activeStreamController.abort();
 
   const input = document.getElementById('chatInput');
   const message = input.value.trim();
-  if (!message) return;
+  if (!message) { isSending = false; return; }
   input.value = '';
   input.style.height = 'auto';
   input.disabled = true;
@@ -555,6 +585,7 @@ async function sendMessage() {
 
   input.disabled = false;
   document.getElementById('sendBtn').disabled = false;
+  isSending = false;
   input.focus();
 }
 
