@@ -38,8 +38,8 @@ parser:
 # ----------------------------------------------------------
 llm:
   provider: "deepseek"
-  # DeepSeek API key (必填)
-  api_key: "${DEEPSEEK_API_KEY}"
+  # DeepSeek API key (使用 LLM 功能时必填)
+  api_key: "${DEEPSEEK_API_KEY:}"
   # OpenAI 原生 API key (使用 OpenAI 时填写)
   openai_api_key: "${OPENAI_API_KEY:}"
   # Anthropic Claude API key (预留)

@@ -1,5 +1,14 @@
 # Lecture Assistant
 
+> ⚠️ **此 `main` 分支已废弃，不再更新。请使用 [`phase1_fixes`](https://github.com/chu-qin/lecture-assistant/tree/phase1_fixes) 分支。**
+>
+> `main` 分支最后一个版本为 **v0.11**（commit `ee77c95`），之后的所有开发和修复均在 `phase1_fixes` 分支进行。
+>
+> ```
+> git checkout phase1_fixes
+> git pull origin phase1_fixes
+> ```
+
 课堂录音转文字 + 课件解析 + AI 复习资料生成 + RAG 智能问答，一站式 Streamlit 应用。
 
 [![Python](https://img.shields.io/badge/python-3.12%2B-blue)](https://www.python.org/)
