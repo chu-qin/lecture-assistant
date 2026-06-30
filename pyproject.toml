@@ -25,6 +25,8 @@ dependencies = [
     "torchaudio>=2.0.0",
     "ebooklib>=0.17",
     "html2text>=2024.2",
+    "fastapi>=0.115.0",
+    "uvicorn>=0.34.0",
 ]
 
 [project.optional-dependencies]
